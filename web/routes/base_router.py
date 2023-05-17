@@ -67,11 +67,11 @@ class UJSONResponse(_JSONResponse):
 async def request_body(request: Request, exclude: list = [], with_matcher: bool = True) -> dict:
     try:
         body = {}
-        if 'application/json' in request.headers.get('Content-Type') and await request.body():
-            body = await request.json()
-        elif 'multipart/form-data' in request.headers.get('Content-Type') or 'application/x-www-form-urlencoded' in request.headers.get(
-                'Content-Type'):
+        if 'multipart/form-data' in request.headers.get('Content-Type', '') or 'application/x-www-form-urlencoded' in request.headers.get(
+                'Content-Type', ''):
             body = dict(await request.form())
+        elif await request.body():
+            body = await request.json()
 
         body = dict(body, **request.path_params, **request.query_params)
         for key in exclude:
@@ -135,7 +135,9 @@ def add_route(router: APIRouter,
 
         @router.post("/create")
         async def create(request: Request) -> dict:
-            param = await request_body(request, False)
+            param = await request_body(request, with_matcher=False)
+            if not param:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='参数不能为空')
             template = protobuf_transformer.dict_to_protobuf(param, pb) if pb else param
             return await manager.add_or_update(template, keep_key=keep_key)
 
@@ -143,7 +145,9 @@ def add_route(router: APIRouter,
 
         @router.post("/update")
         async def update(request: Request) -> dict:
-            param = await request_body(request, False)
+            param = await request_body(request, with_matcher=False)
+            if not param:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='参数不能为空')
             template = protobuf_transformer.dict_to_protobuf(param, pb) if pb else param
             return manager.add_or_update(template, keep_key=keep_key)
 

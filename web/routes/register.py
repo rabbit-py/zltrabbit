@@ -6,6 +6,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from base.functions import env
 from base.di.service_location import service
+from web.middleware.request_context_middleware import RequestContextMiddleware
 from web.routes.base_router import UJSONResponse
 from web.routes.base_router import auto_import
 
@@ -19,6 +20,7 @@ def register_base(app: FastAPI) -> None:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    app.add_middleware(RequestContextMiddleware)
 
     @app.exception_handler(HTTPException)
     async def http_exception_handler(request, exc):

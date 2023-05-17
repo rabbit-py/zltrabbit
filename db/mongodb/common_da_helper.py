@@ -3,9 +3,14 @@
 from base.data_transform import protobuf_transformer
 from base.util import date_utils
 from base.di.service_location import service
+from motor.motor_asyncio import AsyncIOMotorClient
 
 
 class CommonDAHelper():
+
+    @property
+    def client(self) -> AsyncIOMotorClient:
+        return service.get(self.name).get_client()
 
     @property
     def collection(self):
@@ -28,8 +33,13 @@ class CommonDAHelper():
         if matcher is None:
             matcher = {"id": tmp.get('id')}
         tmp.update({'update_time' if keep_key else 'updateTime': date_utils.timestamp_second()})
-        await self.collection.update_one(matcher, {"$set": tmp}, upsert=True)
-        return tmp
+        try:
+            async with await self.client.start_session(causal_consistency=True) as session:
+                async with session.start_transaction():
+                    await self.collection.update_one(matcher, {"$set": tmp}, upsert=True)
+                    return tmp
+        except Exception as e:
+            raise e
 
     async def get(self, id: str = None, matcher: dict = {}, projection: dict = {}, sort: list = []) -> dict:
         if id is not None:
