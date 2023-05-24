@@ -22,11 +22,11 @@ class CommonDAHelper():
         self.coll = coll
         self.id_generator = service.id_generator
 
-    async def add_or_update(self, template, matcher: dict = None, keep_key: bool = False) -> dict:
+    async def add_or_update(self, template, matcher: dict = None, keep_key: bool = False, auto_id: bool = True) -> dict:
         tmp = template
         if not isinstance(tmp, dict):
             tmp = protobuf_transformer.protobuf_to_dict(template, preserving_proto_field_name=keep_key)
-        if not tmp.get('id'):
+        if not tmp.get('id') and auto_id:
             tmp.update({'id': self.id_generator.generate_id()})
         if not tmp.get('create_time' if keep_key else 'createTime') or tmp.get('create_time' if keep_key else 'createTime') in [0, '0']:
             tmp.update({'create_time' if keep_key else 'createTime': date_utils.timestamp_second()})

@@ -98,9 +98,9 @@ def config(name: str, default: Any = None) -> Any:
 
 class BaseService:
 
-    def __getattr__(self, key):
+    def __getattr__(self, key: str) -> Any:
         if key in self.__dict__:
             return self.__dict__[key]
 
-    def __setattr__(self, key, value):
+    def __setattr__(self, key: str, value: Any) -> None:
         self.__dict__[key] = value
