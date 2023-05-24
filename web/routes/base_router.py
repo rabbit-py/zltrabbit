@@ -3,47 +3,12 @@ import importlib
 import inspect
 from json import JSONDecodeError
 import os
-from fastapi import APIRouter, BackgroundTasks, FastAPI, HTTPException, Request, params, status
+from fastapi import APIRouter, BackgroundTasks, FastAPI, HTTPException, Request, status
 from base.data_transform import protobuf_transformer
 from fastapi.responses import UJSONResponse as _JSONResponse
-from typing import Any, Dict, Optional, Callable
+from typing import Optional
 from db.mongodb.common_da_helper import CommonDAHelper
-from pydantic.fields import Undefined
-
-
-def Param(  # noqa: N802
-    default: Any = Undefined,
-    *,
-    alias: Optional[str] = None,
-    title: Optional[str] = None,
-    description: Optional[str] = None,
-    gt: Optional[float] = None,
-    ge: Optional[float] = None,
-    lt: Optional[float] = None,
-    le: Optional[float] = None,
-    min_length: Optional[int] = None,
-    max_length: Optional[int] = None,
-    regex: Optional[str] = None,
-    example: Any = Undefined,
-    examples: Optional[Dict[str, Any]] = None,
-    **extra: Any,
-) -> Any:
-    return params.Param(
-        default=default,
-        alias=alias,
-        title=title,
-        description=description,
-        gt=gt,
-        ge=ge,
-        lt=lt,
-        le=le,
-        min_length=min_length,
-        max_length=max_length,
-        regex=regex,
-        example=example,
-        examples=examples,
-        **extra,
-    )
+from base.functions import to_lower_camel
 
 
 class UJSONResponse(_JSONResponse):
@@ -89,7 +54,8 @@ def add_route(router: APIRouter,
               manager: CommonDAHelper,
               pb: object,
               keep_key: bool,
-              default_matcher: Callable = None,
+              before_events: dict = {},
+              after_events: dict = {},
               exclude: list = []) -> None:
 
     if 'index' not in exclude:
@@ -98,11 +64,16 @@ def add_route(router: APIRouter,
         @router.get("")
         async def index(request: Request, page: int = 1, page_size: int = 20) -> list:
             matcher = await request_body(request, ['page', 'page_size'])
-            if default_matcher is not None:
-                param = await default_matcher(matcher)
+            if not keep_key:
+                matcher = to_lower_camel(matcher)
+            if 'index' in before_events:
+                param = await before_events['index'](matcher)
             else:
                 param = {'matcher': matcher}
-            return (await manager.list(page=page, page_size=page_size, **param)) or []
+            result = (await manager.list(page=page, page_size=page_size, **param)) or []
+            if 'index' in after_events:
+                await after_events['index'](param, result)
+            return result
 
     if 'list' not in exclude:
 
@@ -110,11 +81,33 @@ def add_route(router: APIRouter,
         @router.get("/list")
         async def all(request: Request, page: int = 1, page_sze: int = 0) -> list:
             matcher = await request_body(request, ['page', 'page_size'])
-            if default_matcher is not None:
-                param = await default_matcher(matcher)
+            if not keep_key:
+                matcher = to_lower_camel(matcher)
+            if 'list' in before_events:
+                param = await before_events['list'](matcher)
             else:
                 param = {'matcher': matcher}
-            return (await manager.list(page=page, page_size=page_sze, **param)) or []
+            result = (await manager.list(page=page, page_size=page_sze, **param)) or []
+            if 'list' in after_events:
+                await after_events['list'](param, result)
+            return result
+
+    if 'count' not in exclude:
+
+        @router.post("/count")
+        @router.get("/count")
+        async def count(request: Request) -> int:
+            matcher = await request_body(request)
+            if not keep_key:
+                matcher = to_lower_camel(matcher)
+            if 'count' in before_events:
+                param = await before_events['count'](matcher)
+            else:
+                param = {'matcher': matcher}
+            result = (await manager.count(param.get('matcher'))) or 0
+            if 'count' in after_events:
+                await after_events['count'](param, result)
+            return result
 
     if 'get' not in exclude:
 
@@ -122,14 +115,19 @@ def add_route(router: APIRouter,
         @router.get("/get")
         @router.get("/get/{id}")
         async def get(request: Request, id: str = None) -> dict:
-            matcher = await request_body(request, ['id'])
-            if id is None and not matcher and default_matcher is None:
+            matcher = await request_body(request)
+            if id is None and not matcher and not before_events:
                 return {}
-            if default_matcher is not None:
-                param = await default_matcher(matcher)
+            if not keep_key:
+                matcher = to_lower_camel(matcher)
+            if 'get' in before_events:
+                param = await before_events['get'](matcher)
             else:
                 param = {'matcher': matcher}
-            return (await manager.get(id, **param)) or {}
+            result = (await manager.get(id, **param)) or {}
+            if 'get' in after_events:
+                await after_events['get'](param, result)
+            return result
 
     if 'create' not in exclude:
 
@@ -138,8 +136,15 @@ def add_route(router: APIRouter,
             param = await request_body(request, with_matcher=False)
             if not param:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='参数不能为空')
-            template = protobuf_transformer.dict_to_protobuf(param, pb) if pb else param
-            return await manager.add_or_update(template, keep_key=keep_key)
+            if not keep_key:
+                param = to_lower_camel(param)
+            if 'create' in before_events:
+                param = await before_events['create'](param)
+            template = protobuf_transformer.dict_to_protobuf(param, pb) if pb and not param.get('id') else param
+            result = await manager.add_or_update(template, keep_key=keep_key)
+            if 'create' in after_events:
+                await after_events['create'](param, result)
+            return result
 
     if 'update' not in exclude:
 
@@ -148,8 +153,15 @@ def add_route(router: APIRouter,
             param = await request_body(request, with_matcher=False)
             if not param:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='参数不能为空')
-            template = protobuf_transformer.dict_to_protobuf(param, pb) if pb else param
-            return manager.add_or_update(template, keep_key=keep_key)
+            if not keep_key:
+                param = to_lower_camel(param)
+            if 'update' in before_events:
+                param = await before_events['update'](param)
+            template = protobuf_transformer.dict_to_protobuf(param, pb) if pb and not param.get('id') else param
+            result = await manager.add_or_update(template, keep_key=keep_key)
+            if 'update' in after_events:
+                await after_events['update'](param, result)
+            return result
 
     if 'delete' not in exclude:
 
@@ -169,11 +181,12 @@ class BaseRouter:
                  manager: CommonDAHelper,
                  pb: object = None,
                  keep_key: bool = False,
-                 default_matcher: Callable = None,
+                 before_events: dict = {},
+                 after_events: dict = {},
                  exclude: list = ['delete']) -> None:
         self._router = router
         self._router.default_response_class = UJSONResponse
-        add_route(router, manager, pb, keep_key, default_matcher, exclude)
+        add_route(router, manager, pb, keep_key, before_events, after_events, exclude)
 
 
 def auto_import(path: str, app: FastAPI) -> None:

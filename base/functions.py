@@ -43,7 +43,7 @@ def function_timer(name: str = None) -> Callable:
     return decorator
 
 
-def turn_param_style(params: dict) -> dict:
+def to_snake(params: dict, all: bool = True) -> dict:
     '''
     将参数名的驼峰形式转为下划线形式
     @param params:
@@ -54,7 +54,17 @@ def turn_param_style(params: dict) -> dict:
         new_name = name
         if '_' not in name:
             new_name = re.sub(r'([a-z])([A-Z])', r'\1_\2', name)
-        temp_dict.update({new_name.lower(): value})
+        temp_dict.update({new_name.lower(): to_snake(value) if all and isinstance(value, dict) else value})
+
+    return temp_dict
+
+
+def to_lower_camel(params: dict, all: bool = True):
+    """下划线转小驼峰法命名"""
+    temp_dict = {}
+    for name, value in params.items():
+        new_name = re.sub('_([a-zA-Z])', lambda m: (m.group(1).upper()), name)
+        temp_dict.update({new_name: to_lower_camel(value) if all and isinstance(value, dict) else value})
 
     return temp_dict
 

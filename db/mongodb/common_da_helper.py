@@ -55,6 +55,9 @@ class CommonDAHelper():
         return await self.collection.find(matcher, projection=projection,
                                           sort=sort).skip(page_size * (page - 1)).limit(page_size).to_list(length=None)
 
+    async def count(self, matcher: dict = {}) -> int:
+        return await self.collection.count_documents(matcher)
+
     async def delete(self, id: str = None, matcher: dict = {}) -> int:
         if id is not None:
             matcher.update({"id": id})
