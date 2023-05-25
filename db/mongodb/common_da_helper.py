@@ -14,7 +14,7 @@ class CommonDAHelper():
 
     @property
     def collection(self):
-        return service.get(self.name).get_client()[self.db][self.coll]
+        return self.client[self.db][self.coll]
 
     def __init__(self, db: str, coll: str, name: str = 'db.default') -> None:
         self.name = name
@@ -28,18 +28,16 @@ class CommonDAHelper():
             tmp = protobuf_transformer.protobuf_to_dict(template, preserving_proto_field_name=keep_key)
         if not tmp.get('id') and auto_id:
             tmp.update({'id': self.id_generator.generate_id()})
-        if not tmp.get('create_time' if keep_key else 'createTime') or tmp.get('create_time' if keep_key else 'createTime') in [0, '0']:
-            tmp.update({'create_time' if keep_key else 'createTime': date_utils.timestamp_second()})
+        create_time_key = 'create_time' if keep_key else 'createTime'
+        if not tmp.get(create_time_key) or tmp.get(create_time_key) in [0, '0']:
+            tmp.update({create_time_key: date_utils.timestamp_second()})
+        elif create_time_key in tmp:
+            tmp.update({create_time_key: int(tmp[create_time_key])})
         if matcher is None:
             matcher = {"id": tmp.get('id')}
         tmp.update({'update_time' if keep_key else 'updateTime': date_utils.timestamp_second()})
-        try:
-            async with await self.client.start_session(causal_consistency=True) as session:
-                async with session.start_transaction():
-                    await self.collection.update_one(matcher, {"$set": tmp}, upsert=True)
-                    return tmp
-        except Exception as e:
-            raise e
+        await self.collection.update_one(matcher, {"$set": tmp}, upsert=True)
+        return tmp
 
     async def get(self, id: str = None, matcher: dict = {}, projection: dict = {}, sort: list = []) -> dict:
         if id is not None:

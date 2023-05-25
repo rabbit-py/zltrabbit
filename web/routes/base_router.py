@@ -38,7 +38,7 @@ async def request_body(request: Request, exclude: list = [], with_matcher: bool 
         elif await request.body():
             body = await request.json()
 
-        body = dict(body, **request.path_params, **request.query_params)
+        body = dict(dict(request.path_params, **request.query_params), **body)
         for key in exclude:
             key in body and body.pop(key)
         if with_matcher:
