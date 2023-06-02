@@ -4,7 +4,6 @@ import inspect
 from json import JSONDecodeError
 import os
 from fastapi import APIRouter, BackgroundTasks, FastAPI, HTTPException, Request, status
-from base.data_transform import protobuf_transformer
 from fastapi.responses import UJSONResponse as _JSONResponse
 from typing import Optional
 from db.mongodb.common_da_helper import CommonDAHelper
@@ -16,7 +15,7 @@ class UJSONResponse(_JSONResponse):
     def __init__(
         self,
         content=None,
-        code=200,
+        code=0,
         msg: str = None,
         headers=None,
         status_code: int = 200,
@@ -62,32 +61,32 @@ def add_route(router: APIRouter,
 
         @router.post("")
         @router.get("")
-        async def index(request: Request, page: int = 1, page_size: int = 20) -> list:
-            matcher = await request_body(request, ['page', 'page_size'])
+        async def index(request: Request, page: int = 1, pageSize: int = 20) -> dict:
+            matcher = await request_body(request, ['page', 'pageSize'])
             if not keep_key:
                 matcher = to_lower_camel(matcher)
             if 'index' in before_events:
                 param = await before_events['index'](matcher)
             else:
                 param = {'matcher': matcher}
-            result = (await manager.list(page=page, page_size=page_size, **param)) or []
+            result = (await manager.list(page=page, page_size=pageSize, **param)) or []
             if 'index' in after_events:
                 await after_events['index'](param, result)
-            return result
+            return {'total': await manager.count(param.get('matcher')), 'records': result}
 
     if 'list' not in exclude:
 
         @router.post("/list")
         @router.get("/list")
-        async def all(request: Request, page: int = 1, page_sze: int = 0) -> list:
-            matcher = await request_body(request, ['page', 'page_size'])
+        async def all(request: Request, page: int = 1, pageSize: int = 0) -> list:
+            matcher = await request_body(request, ['page', 'pageSize'])
             if not keep_key:
                 matcher = to_lower_camel(matcher)
             if 'list' in before_events:
                 param = await before_events['list'](matcher)
             else:
                 param = {'matcher': matcher}
-            result = (await manager.list(page=page, page_size=page_sze, **param)) or []
+            result = (await manager.list(page=page, page_size=pageSize, **param)) or []
             if 'list' in after_events:
                 await after_events['list'](param, result)
             return result
@@ -129,38 +128,23 @@ def add_route(router: APIRouter,
                 await after_events['get'](param, result)
             return result
 
-    if 'create' not in exclude:
-
-        @router.post("/create")
-        async def create(request: Request) -> dict:
-            param = await request_body(request, with_matcher=False)
-            if not param:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='参数不能为空')
-            if not keep_key:
-                param = to_lower_camel(param)
-            if 'create' in before_events:
-                param = await before_events['create'](param)
-            template = protobuf_transformer.dict_to_protobuf(param, pb) if pb and not param.get('id') else param
-            result = await manager.add_or_update(template, keep_key=keep_key)
-            if 'create' in after_events:
-                await after_events['create'](param, result)
-            return result
-
-    if 'update' not in exclude:
+    if 'save' not in exclude:
 
         @router.post("/update")
+        @router.post("/create")
         async def update(request: Request) -> dict:
             param = await request_body(request, with_matcher=False)
             if not param:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='参数不能为空')
             if not keep_key:
                 param = to_lower_camel(param)
-            if 'update' in before_events:
-                param = await before_events['update'](param)
-            template = protobuf_transformer.dict_to_protobuf(param, pb) if pb and not param.get('id') else param
-            result = await manager.add_or_update(template, keep_key=keep_key)
-            if 'update' in after_events:
-                await after_events['update'](param, result)
+            result = await manager.add_or_update(**(await before_events['save'](param) if 'save' in before_events else {
+                'data': param
+            }),
+                                                 keep_key=keep_key,
+                                                 pb=pb)
+            if 'save' in after_events:
+                await after_events['save'](param, result)
             return result
 
     if 'delete' not in exclude:

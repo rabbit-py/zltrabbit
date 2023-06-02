@@ -3,7 +3,7 @@
 from typing import Any
 
 from fastapi import HTTPException, status
-from base.coroutine import context
+from base.coroutine.context import context
 from base.di.service_location import config
 
 

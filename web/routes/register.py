@@ -9,7 +9,7 @@ from base.di.service_location import service
 from web.middleware.request_context_middleware import RequestContextMiddleware
 from web.routes.base_router import UJSONResponse
 from web.routes.base_router import auto_import
-
+from base.logger.logger import loguru_setup
 
 def register_base(app: FastAPI) -> None:
 
@@ -32,5 +32,7 @@ def register_base(app: FastAPI) -> None:
 
     @app.on_event("startup")
     def startup_event():
+        # 初始化 Loguru
+        loguru_setup()
         service.refresh()
         auto_import(env('ROUTE_PATH'), app)

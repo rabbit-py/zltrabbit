@@ -1,7 +1,7 @@
 import sys
 from loguru import logger
 from uuid import uuid1
-from ..coroutine import context
+from ..coroutine.context import context
 from ..di.service_location import service
 
 
@@ -24,4 +24,4 @@ def loguru_setup() -> None:
         "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | {extra[request_id]} | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | <level>{message}</level>"
     )
     logger.remove()
-    logger.add(sys.stderr, format=custom_format, level=config.get('level', "INFO"), filter=filter)
+    logger.add(sys.stderr, format=custom_format, level=config.get('level', 0), filter=filter)

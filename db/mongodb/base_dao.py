@@ -4,6 +4,7 @@ import asyncio
 from base.di.service_location import service
 from db.mongodb.common_da_helper import CommonDAHelper
 from motor.motor_asyncio import AsyncIOMotorClient
+from base.coroutine.context import context
 
 
 class BaseDAO:
@@ -17,11 +18,16 @@ class BaseDAO:
     def client(self) -> AsyncIOMotorClient:
         return service.get(self._conn).get_client()
 
-    async def transaction(self, *args, **kwargs) -> bool:
+    async def transaction(self, *args, use_session=True, **kwargs) -> list:
         async with await self.client.start_session(causal_consistency=True) as session:
             async with session.start_transaction():
-                await asyncio.gather(*args, **kwargs)
-                return True
+                try:
+                    use_session and context.set('mongo_session', session)
+                    return await asyncio.gather(*args, **kwargs)
+                except Exception as e:
+                    raise e
+                finally:
+                    use_session and context.remove('mongo_session')
 
     def __getattr__(self, key: str) -> CommonDAHelper:
         key = key.replace('_db', '')
