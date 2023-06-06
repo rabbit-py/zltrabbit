@@ -6,13 +6,11 @@ from typing import Callable
 class MatchHelper:
     match_map = {
         'like': lambda x: {
-            '$regex': x,
-            '$options': '-i'
+            '$regex': x
         },
         'not like': lambda x: {
             '$not': {
-                '$regex': x,
-                '$options': '-i'
+                '$regex': x
             }
         },
         'in': lambda x: {

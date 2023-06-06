@@ -3,12 +3,12 @@
 from typing import Tuple
 
 from pymongo import ReturnDocument, UpdateOne
+from pymongo.results import BulkWriteResult
 from base.data_transform import protobuf_transformer
 from base.util import date_utils
 from base.di.service_location import service
 from base.coroutine.context import context
 from motor.motor_asyncio import AsyncIOMotorClientSession
-from base.functions import to_lower_camel
 
 
 class CommonDAHelper():
@@ -61,22 +61,21 @@ class CommonDAHelper():
                                                          projection=projection,
                                                          session=self.session)
 
-    async def batch_add_or_update(self, templates: list, matcher: list = None, keep_key: bool = False, pb: object = None) -> bool:
+    async def batch_add_or_update(self, datas: list, matcher: list = None, keep_key: bool = False, pb: object = None) -> BulkWriteResult:
         bulk_write_data = []
-        for template in templates:
-            template, pb_tmp = self.prefix_data(template, keep_key, pb)
+        for data in datas:
+            data, pb_tmp = self.prefix_data(data, keep_key, pb)
             if matcher is None:
                 condition = {"id": pb_tmp.get('id')}
             else:
                 condition = {}
                 for key in matcher:
-                    condition.update({key: template.get(key)})
+                    condition.update({key: data.get(key)})
             bulk_write_data.append(
                 UpdateOne(condition, {
-                    "$set": template,
-                    '$setOnInsert': dict(filter(lambda x: x[0] not in template, pb_tmp.items()))
-                },
-                          upsert=True))
+                    "$set": data,
+                    '$setOnInsert': dict(filter(lambda x: x[0] not in data, pb_tmp.items()))
+                }, upsert=True))
 
         return await self.collection.bulk_write(bulk_write_data, session=self.session)
 

@@ -36,10 +36,10 @@ async def request_body(request: Request, exclude: list = [], with_matcher: bool 
             body = dict(await request.form())
         elif await request.body():
             body = await request.json()
-
-        body = dict(dict(request.path_params, **request.query_params), **body)
-        for key in exclude:
-            key in body and body.pop(key)
+        if isinstance(body, dict):
+            body = dict(dict(request.path_params, **request.query_params), **body)
+            for key in exclude:
+                key in body and body.pop(key)
         if with_matcher:
             return dict(body.pop('matcher'), **body) if 'matcher' in body else body
         return body
@@ -132,6 +132,7 @@ def add_route(router: APIRouter,
 
         @router.post("/update")
         @router.post("/create")
+        @router.post("/save")
         async def update(request: Request) -> dict:
             param = await request_body(request, with_matcher=False)
             if not param:
@@ -147,11 +148,48 @@ def add_route(router: APIRouter,
                 await after_events['save'](param, result)
             return result
 
+        @router.post("/batch_update")
+        @router.post("/batch_create")
+        @router.post("/batch_save")
+        async def batch_update(request: Request) -> bool:
+            param = await request_body(request, with_matcher=False)
+            if not param:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='参数不能为空')
+
+            if not keep_key:
+                for item in param:
+                    item = to_lower_camel(item)
+            result = await manager.batch_add_or_update(**(await before_events['batch'](param) if 'batch' in before_events else {
+                'datas': param
+            }),
+                                                       keep_key=keep_key,
+                                                       pb=pb)
+            if 'batch' in after_events:
+                await after_events['batch'](item, result)
+            return True
+
     if 'delete' not in exclude:
 
         @router.delete("/delete/{id}")
         async def delete(id: str) -> int:
             return await manager.delete(id)
+
+    if 'distinct' not in exclude:
+
+        @router.get("/distinct")
+        @router.post("/distinct")
+        async def distinct(request: Request, key: str) -> list:
+            matcher = await request_body(request, ['key'])
+            if not keep_key:
+                matcher = to_lower_camel(matcher)
+            if 'distinct' in before_events:
+                param = await before_events['distinct'](matcher)
+            else:
+                param = {'matcher': matcher}
+            result = await manager.distinct(key, **param)
+            if 'distinct' in after_events:
+                await after_events['distinct'](param, result)
+            return result
 
 
 class BaseRouter:
