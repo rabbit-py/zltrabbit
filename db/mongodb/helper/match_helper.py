@@ -3,6 +3,61 @@
 from typing import Callable
 
 
+class Pipeline:
+
+    @property
+    def data(self) -> list:
+        return self._data
+
+    def __init__(self) -> None:
+        self._data = []
+
+    def match(self, match: dict):
+        if match:
+            self._data.append({'$match': match})
+        return self
+
+    def lookup(self, lookup: dict):
+        if lookup:
+            self._data.append({'$lookup': lookup})
+        return self
+
+    def unwind(self, unwind: dict):
+        if unwind:
+            self._data.append({'$unwind': unwind})
+        return self
+
+    def project(self, project: dict):
+        if project:
+            self._data.append({'$project': project})
+        return self
+
+    def sort(self, sort: dict):
+        if sort:
+            self._data.append({'$sort': sort})
+        return self
+
+    def group(self, group: dict):
+        if group:
+            self._data.append({'$group': group})
+        return self
+
+    def facet(self, facet: dict):
+        if facet:
+            self._data.append({'$facet': facet})
+        return self
+
+    def limit(self, limit: int):
+        if limit:
+            self._data.append({'$limit': limit})
+        return self
+
+    def skip(self, skip: int):
+        if skip:
+            self._data.append({'$skip': skip})
+        return self
+
+
 class MatchHelper:
     match_map = {
         'like': lambda x: {
@@ -41,6 +96,9 @@ class MatchHelper:
         for key in [x for x in matcher.keys()]:
             func = convert_map.get(key, matcher[key])
             matcher.update({key: func(matcher[key]) if isinstance(func, Callable) else func})
+
+    def pipeline(self) -> Pipeline:
+        return Pipeline()
 
 
 match_helper = MatchHelper()

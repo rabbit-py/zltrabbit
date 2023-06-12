@@ -62,50 +62,61 @@ def add_route(router: APIRouter,
         @router.post("")
         @router.get("")
         async def index(request: Request, page: int = 1, pageSize: int = 20) -> dict:
-            matcher = await request_body(request, ['page', 'pageSize'])
+            matcher = await request_body(request)
+            page = matcher.pop('page', page)
+            pageSize = matcher.pop('pageSize', pageSize)
             if not keep_key:
                 matcher = to_lower_camel(matcher)
-            if 'index' in before_events:
-                param = await before_events['index'](matcher)
+            if 'list' in before_events:
+                param = await before_events['list'](matcher)
             else:
-                param = {'matcher': matcher}
-            result = (await manager.list(page=page, page_size=pageSize, **param)) or []
-            if 'index' in after_events:
-                await after_events['index'](param, result)
-            return {'total': await manager.count(param.get('matcher')), 'records': result}
+                param = [{'$match': matcher}]
+            param.append({
+                '$facet': {
+                    'total': [{
+                        '$count': "count"
+                    }],
+                    'records': [{
+                        '$project': {
+                            '_id': False
+                        }
+                    }, {
+                        '$skip': pageSize * (page - 1)
+                    }, {
+                        '$limit': pageSize
+                    }]
+                }
+            })
+            param.append({'$project': {
+                'records': "$records",
+                'total': {
+                    '$ifNull': [{
+                        '$arrayElemAt': ["$total.count", 0]
+                    }, 0]
+                },
+            }})
+            result = (await manager.aggregate(param)).pop(0)
+            if 'list' in after_events:
+                await after_events['list'](param, result['records'])
+            return result
 
     if 'list' not in exclude:
 
         @router.post("/list")
         @router.get("/list")
         async def all(request: Request, page: int = 1, pageSize: int = 0) -> list:
-            matcher = await request_body(request, ['page', 'pageSize'])
+            matcher = await request_body(request)
+            page = matcher.pop('page', page)
+            pageSize = matcher.pop('pageSize', pageSize)
             if not keep_key:
                 matcher = to_lower_camel(matcher)
             if 'list' in before_events:
                 param = await before_events['list'](matcher)
             else:
-                param = {'matcher': matcher}
-            result = (await manager.list(page=page, page_size=pageSize, **param)) or []
+                param = [{'$match': matcher}, {'$project': {'_id': False}}]
+            result = (await manager.aggregate(param, page=page, page_size=pageSize)) or []
             if 'list' in after_events:
                 await after_events['list'](param, result)
-            return result
-
-    if 'count' not in exclude:
-
-        @router.post("/count")
-        @router.get("/count")
-        async def count(request: Request) -> int:
-            matcher = await request_body(request)
-            if not keep_key:
-                matcher = to_lower_camel(matcher)
-            if 'count' in before_events:
-                param = await before_events['count'](matcher)
-            else:
-                param = {'matcher': matcher}
-            result = (await manager.count(param.get('matcher'))) or 0
-            if 'count' in after_events:
-                await after_events['count'](param, result)
             return result
 
     if 'get' not in exclude:
@@ -122,8 +133,8 @@ def add_route(router: APIRouter,
             if 'get' in before_events:
                 param = await before_events['get'](matcher)
             else:
-                param = {'matcher': matcher}
-            result = (await manager.get(id, **param)) or {}
+                param = [{'$match': matcher if not id else dict(matcher, **{'id': id})}]
+            result = (await manager.aggregate(param)).pop(0)
             if 'get' in after_events:
                 await after_events['get'](param, result)
             return result

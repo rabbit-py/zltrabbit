@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from typing import Tuple
+from typing import List, Tuple
 
 from pymongo import ReturnDocument, UpdateOne
-from pymongo.results import BulkWriteResult
+from pymongo.results import BulkWriteResult, DeleteResult
 from base.data_transform import protobuf_transformer
 from base.util import date_utils
 from base.di.service_location import service
@@ -79,42 +79,52 @@ class CommonDAHelper():
 
         return await self.collection.bulk_write(bulk_write_data, session=self.session)
 
-    async def get(self, id: str = None, matcher: dict = {}, projection: dict = {}, sort: list = []) -> dict:
+    async def get(self, id: str = None, matcher: dict = {}, projection: dict = {}, sort: list = [], **kwargs) -> dict:
         if id is not None:
             matcher.update({"id": id})
         if not matcher:
             return
         projection.update({"_id": False})
-        return (await self.collection.find_one(matcher, projection=projection, sort=sort)) or {}
+        return (await self.collection.find_one(matcher, projection=projection, sort=sort, **kwargs)) or {}
 
-    async def list(self, matcher: dict = {}, projection: dict = {}, page: int = 1, page_size: int = 0, sort=[]) -> list:
+    async def list(self, matcher: dict = {}, projection: dict = {}, page: int = 1, page_size: int = 0, sort=[], **kwargs) -> List:
         page = page if page > 0 else 1
         projection.update({"_id": False})
-        return await self.collection.find(matcher, projection=projection,
-                                          sort=sort).skip(page_size * (page - 1)).limit(page_size).to_list(length=None)
+        return await self.collection.find(matcher, projection=projection, sort=sort,
+                                          **kwargs).skip(page_size * (page - 1)).limit(page_size).to_list(length=None)
 
     async def count(self, matcher: dict = {}) -> int:
         return await self.collection.count_documents(matcher)
 
-    async def delete(self, id: str = None, matcher: dict = {}) -> int:
+    async def delete(self, id: str = None, matcher: dict = {}) -> DeleteResult:
         if id is not None:
             matcher.update({"id": id})
         if not matcher:
             return
-        result = await self.collection.delete_one(matcher)
-        return result.deleted_count
+        return await self.collection.delete_one(matcher)
 
-    async def sample(self, sample: int, matcher: dict = {}, projection: dict = {}, sort: list = []) -> list:
+    async def batch_delete(self, matcher: dict = {}) -> DeleteResult:
+        return await self.collection.delete_many(matcher)
+
+    async def sample(self, sample: int, matcher: dict = {}, projection: dict = {}, sort: List = []) -> List:
         projection.update({"_id": False})
         param = []
         if matcher:
             param.append({'$match': matcher})
         if sort:
-            param.append({'$sort': sort})
-        if sample:
-            param.append({'$sample': {'size': sample}})
-        param.append({'$project': projection})
+            param.append({'$sort': dict(sort)})
+        if projection:
+            param.append({'$project': projection})
+        param.append({'sample': {'size': sample}})
         return await self.collection.aggregate(param).to_list(length=None)
 
-    async def distinct(self, key: str, matcher: dict = {}) -> list:
+    async def distinct(self, key: str, matcher: dict = {}) -> List:
         return await self.collection.find(matcher).distinct(key)
+
+    async def aggregate(self, pipeline: List = [], page: int = 1, page_size: int = 0) -> List:
+        if page > 1:
+            pipeline.append({'$skip': page_size * (page - 1)})
+        if page_size > 0:
+            pipeline.append({'$limit': page_size})
+        pipeline.append({'$project': {'_id': False}})
+        return await self.collection.aggregate(pipeline).to_list(length=None)
