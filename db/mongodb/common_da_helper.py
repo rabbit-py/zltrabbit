@@ -115,7 +115,7 @@ class CommonDAHelper():
             param.append({'$sort': dict(sort)})
         if projection:
             param.append({'$project': projection})
-        param.append({'sample': {'size': sample}})
+        param.append({'$sample': {'size': sample}})
         return await self.collection.aggregate(param).to_list(length=None)
 
     async def distinct(self, key: str, matcher: dict = {}) -> List:

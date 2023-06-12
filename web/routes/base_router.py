@@ -95,7 +95,7 @@ def add_route(router: APIRouter,
                     }, 0]
                 },
             }})
-            result = (await manager.aggregate(param)).pop(0)
+            result = ((await manager.aggregate(param)) or [{'records': [], 'total': 0}]).pop(0)
             if 'list' in after_events:
                 await after_events['list'](param, result['records'])
             return result
@@ -134,7 +134,7 @@ def add_route(router: APIRouter,
                 param = await before_events['get'](matcher)
             else:
                 param = [{'$match': matcher if not id else dict(matcher, **{'id': id})}]
-            result = (await manager.aggregate(param)).pop(0)
+            result = ((await manager.aggregate(param)) or [{}]).pop(0)
             if 'get' in after_events:
                 await after_events['get'](param, result)
             return result
