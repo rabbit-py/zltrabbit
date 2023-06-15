@@ -57,6 +57,11 @@ class Pipeline:
             self._data.append({'$skip': skip})
         return self
 
+    def replace_root(self, replace_root: dict):
+        if replace_root:
+            self._data.append({'$replaceRoot': replace_root})
+        return self
+
 
 class MatchHelper:
     match_map = {

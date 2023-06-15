@@ -8,7 +8,7 @@ from base.data_transform import protobuf_transformer
 from base.util import date_utils
 from base.di.service_location import service
 from base.coroutine.context import context
-from motor.motor_asyncio import AsyncIOMotorClientSession
+from motor.motor_asyncio import AsyncIOMotorClientSession, AsyncIOMotorCollection
 
 
 class CommonDAHelper():
@@ -18,7 +18,7 @@ class CommonDAHelper():
         return context.get('mongo_session')
 
     @property
-    def collection(self):
+    def collection(self) -> AsyncIOMotorCollection:
         return service.get(self.name).get_client()[self.db][self.coll]
 
     def __init__(self, db: str, coll: str, name: str = 'db.default') -> None:
