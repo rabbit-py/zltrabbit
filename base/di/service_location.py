@@ -4,7 +4,7 @@ import importlib
 import re
 import component
 import yaml
-from typing import Any
+from typing import Any, Optional
 from ..functions import env
 
 
@@ -24,7 +24,7 @@ class ServiceLocation:
                 data = yaml.load(stream=f, Loader=yaml.FullLoader)
                 self.configs = dict(self.configs, **data)
 
-    def get(self, name: str, data: dict = {}, only_config: bool = False) -> Any:
+    def get(self, name: str, data: Optional[dict] = None, only_config: bool = False) -> Any:
         if only_config:
             return self.configs.get(name)
         if not self.sl_map.get(name):
