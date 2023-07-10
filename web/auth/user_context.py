@@ -17,7 +17,7 @@ class UserContext:
         return id
 
     def get(self) -> dict:
-        return context.get('request_user', {}).get('data')
+        return context.get('request_user', {}).get('data', {})
 
     def set(self, user: dict) -> None:
         context.set('request_user', user)

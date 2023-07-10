@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from abc import abstractmethod
+from abc import abstractmethod, ABCMeta
 
 
-class StorageInterface():
+class StorageInterface(metaclass=ABCMeta):
 
     @abstractmethod
     def save_token(self, token: dict, key: str = 'id', expired: int = 7200) -> None:

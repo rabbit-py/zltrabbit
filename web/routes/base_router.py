@@ -61,7 +61,7 @@ def add_route(router: APIRouter,
 
         @router.post("")
         @router.get("")
-        async def index(request: Request, page: int = 1, pageSize: int = 20) -> dict:
+        async def index(request: Request, page: Optional[int] = 1, pageSize: Optional[int] = 20) -> dict:
             matcher = await request_body(request)
             page = matcher.pop('page', page)
             pageSize = matcher.pop('pageSize', pageSize)
@@ -104,7 +104,7 @@ def add_route(router: APIRouter,
 
         @router.post("/list")
         @router.get("/list")
-        async def all(request: Request, page: int = 1, pageSize: int = 0) -> list:
+        async def all(request: Request, page: Optional[int] = 1, pageSize: Optional[int] = 0) -> list:
             matcher = await request_body(request)
             page = matcher.pop('page', page)
             pageSize = matcher.pop('pageSize', pageSize)
@@ -181,9 +181,10 @@ def add_route(router: APIRouter,
 
     if 'delete' not in exclude:
 
-        @router.delete("/delete/{id}")
+        @router.delete("/{id}")
+        @router.post("/delete/{id}")
         async def delete(id: str) -> int:
-            return await manager.delete(id)
+            return (await manager.delete(id)).deleted_count
 
     if 'distinct' not in exclude:
 

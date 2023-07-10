@@ -62,6 +62,11 @@ class Pipeline:
             self._data.append({'$replaceRoot': replace_root})
         return self
 
+    def addFields(self, fields: dict):
+        if fields:
+            self._data.append({'$addFields': fields})
+        return self
+
 
 class MatchHelper:
     match_map = {

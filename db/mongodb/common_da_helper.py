@@ -29,6 +29,8 @@ class CommonDAHelper():
 
     def prefix_data(self, data: dict, keep_key: bool = False, pb: object = None) -> Tuple:
         pb_tmp = {'id': data.pop('id', None)}
+        create_time_key = 'create_time' if keep_key else 'createTime'
+        data.pop(create_time_key, None)
         if pb is not None:
             pb_tmp = dict(
                 protobuf_transformer.protobuf_to_dict(protobuf_transformer.dict_to_protobuf(data, pb), preserving_proto_field_name=keep_key),
@@ -36,14 +38,12 @@ class CommonDAHelper():
             for key in [x for x in data.keys()]:
                 if key not in pb_tmp:
                     data.pop(key)
+        time = date_utils.timestamp_second()
         if not pb_tmp.get('id'):
             pb_tmp.update({'id': self.id_generator.generate_id()})
-        time = date_utils.timestamp_second()
-        create_time_key = 'create_time' if keep_key else 'createTime'
-        if not pb_tmp.get(create_time_key) or pb_tmp.get(create_time_key) in [0, '0']:
             pb_tmp.update({create_time_key: time})
-        elif create_time_key in pb_tmp:
-            pb_tmp.update({create_time_key: int(pb_tmp[create_time_key])})
+        else:
+            pb_tmp.pop(create_time_key, None)
         data.update({'update_time' if keep_key else 'updateTime': time})
         return data, pb_tmp
 
