@@ -63,14 +63,17 @@ def add_route(router: APIRouter,
         @router.get("")
         async def index(request: Request, page: Optional[int] = 1, pageSize: Optional[int] = 20) -> dict:
             matcher = await request_body(request)
-            page = matcher.pop('page', page)
-            pageSize = matcher.pop('pageSize', pageSize)
+            paged = matcher.pop('page{}', {})
+            page = paged.pop('page', page)
+            pageSize = paged.pop('pageSize', pageSize)
             if not keep_key:
                 matcher = to_lower_camel(matcher)
+            sort = matcher.pop('sort{}', None)
             if 'list' in before_events:
                 param = await before_events['list'](matcher)
             else:
                 param = [{'$match': matcher}]
+            sort and param.append({'$sort': sort})
             param.append({
                 '$facet': {
                     'total': [{
@@ -106,14 +109,17 @@ def add_route(router: APIRouter,
         @router.get("/list")
         async def all(request: Request, page: Optional[int] = 1, pageSize: Optional[int] = 0) -> list:
             matcher = await request_body(request)
-            page = matcher.pop('page', page)
-            pageSize = matcher.pop('pageSize', pageSize)
+            paged = matcher.pop('page{}', {})
+            page = paged.pop('page', page)
+            pageSize = paged.pop('pageSize', pageSize)
             if not keep_key:
                 matcher = to_lower_camel(matcher)
+            sort = matcher.pop('sort{}', None)
             if 'list' in before_events:
                 param = await before_events['list'](matcher)
             else:
                 param = [{'$match': matcher}, {'$project': {'_id': False}}]
+            sort and param.append({'$sort': sort})
             result = (await manager.aggregate(param, page=page, page_size=pageSize)) or []
             if 'list' in after_events:
                 await after_events['list'](param, result)
@@ -130,10 +136,12 @@ def add_route(router: APIRouter,
                 return {}
             if not keep_key:
                 matcher = to_lower_camel(matcher)
+            sort = matcher.pop('sort{}', None)
             if 'get' in before_events:
                 param = await before_events['get'](matcher)
             else:
                 param = [{'$match': matcher if not id else dict(matcher, **{'id': id})}]
+            sort and param.append({'$sort': sort})
             result = ((await manager.aggregate(param)) or [{}]).pop(0)
             if 'get' in after_events:
                 await after_events['get'](param, result)
