@@ -3,10 +3,10 @@ from functools import wraps
 from loguru import logger
 import redis.asyncio as redis
 from redis.asyncio.lock import Lock
-from base.di.service_location import service
+from base.di.service_location import BaseService, service
 
 
-class RedisManager:
+class RedisManager(BaseService):
 
     @property
     def client(self) -> redis.Redis:

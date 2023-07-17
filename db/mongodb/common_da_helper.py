@@ -10,8 +10,10 @@ from base.di.service_location import service
 from base.coroutine.context import context
 from motor.motor_asyncio import AsyncIOMotorClientSession, AsyncIOMotorCollection
 
+from db.da_interface import DaInterface
 
-class CommonDAHelper():
+
+class CommonDAHelper(DaInterface):
 
     @property
     def session(self) -> AsyncIOMotorClientSession:
@@ -47,7 +49,7 @@ class CommonDAHelper():
         data.update({'update_time' if keep_key else 'updateTime': time})
         return data, pb_tmp
 
-    async def add_or_update(self, data: dict, matcher: dict = None, projection={}, keep_key: bool = False, pb: object = None) -> dict:
+    async def save(self, data: dict, matcher: dict = None, projection={}, keep_key: bool = False, pb: object = None) -> dict:
         data, pb_tmp = self.prefix_data(data, keep_key, pb)
         if matcher is None:
             matcher = {"id": pb_tmp.get('id')}
@@ -61,7 +63,7 @@ class CommonDAHelper():
                                                          projection=projection,
                                                          session=self.session)
 
-    async def batch_add_or_update(self, datas: list, matcher: list = None, keep_key: bool = False, pb: object = None) -> BulkWriteResult:
+    async def batch_save(self, datas: list, matcher: list = None, keep_key: bool = False, pb: object = None) -> int:
         bulk_write_data = []
         for data in datas:
             data, pb_tmp = self.prefix_data(data, keep_key, pb)
@@ -77,7 +79,8 @@ class CommonDAHelper():
                     '$setOnInsert': dict(filter(lambda x: x[0] not in data, pb_tmp.items()))
                 }, upsert=True))
 
-        return await self.collection.bulk_write(bulk_write_data, session=self.session)
+        result = await self.collection.bulk_write(bulk_write_data, session=self.session)
+        return result.inserted_count + result.modified_count
 
     async def get(self, id: str = None, matcher: dict = {}, projection: dict = {}, sort: list = [], **kwargs) -> dict:
         if id is not None:
@@ -96,15 +99,15 @@ class CommonDAHelper():
     async def count(self, matcher: dict = {}) -> int:
         return await self.collection.count_documents(matcher)
 
-    async def delete(self, id: str = None, matcher: dict = {}) -> DeleteResult:
+    async def delete(self, id: str = None, matcher: dict = {}) -> int:
         if id is not None:
             matcher.update({"id": id})
         if not matcher:
             return
-        return await self.collection.delete_one(matcher)
+        return (await self.collection.delete_one(matcher)).deleted_count
 
-    async def batch_delete(self, matcher: dict = {}) -> DeleteResult:
-        return await self.collection.delete_many(matcher)
+    async def batch_delete(self, matcher: dict = {}) -> int:
+        return (await self.collection.delete_many(matcher)).deleted_count
 
     async def sample(self, sample: int, matcher: dict = {}, projection: dict = {}, sort: List = []) -> List:
         projection.update({"_id": False})
@@ -121,7 +124,38 @@ class CommonDAHelper():
     async def distinct(self, key: str, matcher: dict = {}) -> List:
         return await self.collection.find(matcher).distinct(key)
 
-    async def aggregate(self, pipeline: List = [], page: int = 1, page_size: int = 0) -> List:
+    def index(self, param: List = [], page: int = 1, page_size: int = 20) -> None:
+        param.append({
+            '$facet': {
+                'total': [{
+                    '$count': "count"
+                }],
+                'records': [{
+                    '$project': {
+                        '_id': False
+                    }
+                }, {
+                    '$skip': page_size * (page - 1)
+                }, {
+                    '$limit': page_size
+                }]
+            }
+        })
+        param.append({'$project': {
+            'records': "$records",
+            'total': {
+                '$ifNull': [{
+                    '$arrayElemAt': ["$total.count", 0]
+                }, 0]
+            },
+        }})
+
+    def default_query(self, matcher: dict) -> dict:
+        return [{'$match': matcher}]
+
+    async def query(self, pipeline: List = [], sort={}, page: int = 1, page_size: int = 0) -> List:
+        if sort:
+            pipeline.append({'$sort': sort})
         if page > 1:
             pipeline.append({'$skip': page_size * (page - 1)})
         if page_size > 0:

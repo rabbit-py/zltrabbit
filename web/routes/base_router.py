@@ -6,7 +6,7 @@ import os
 from fastapi import APIRouter, BackgroundTasks, FastAPI, HTTPException, Request, status
 from fastapi.responses import UJSONResponse as _JSONResponse
 from typing import Optional
-from db.mongodb.common_da_helper import CommonDAHelper
+from db.da_interface import DaInterface
 from base.functions import to_lower_camel
 
 
@@ -50,7 +50,7 @@ async def request_body(request: Request, exclude: list = [], with_matcher: bool 
 
 
 def add_route(router: APIRouter,
-              manager: CommonDAHelper,
+              manager: DaInterface,
               pb: object,
               keep_key: bool,
               before_events: dict = {},
@@ -63,42 +63,20 @@ def add_route(router: APIRouter,
         @router.get("")
         async def index(request: Request, page: Optional[int] = 1, pageSize: Optional[int] = 20) -> dict:
             matcher = await request_body(request)
+            query = matcher.pop('query{}', {})
+            matcher = dict(matcher, **query)
             paged = matcher.pop('page{}', {})
-            page = paged.pop('page', page)
-            pageSize = paged.pop('pageSize', pageSize)
+            page = int(paged.pop('page', matcher.pop('page', page)))
+            pageSize = int(paged.pop('pageSize', matcher.pop('pageSize', pageSize)))
             if not keep_key:
                 matcher = to_lower_camel(matcher)
             sort = matcher.pop('sort{}', None)
             if 'list' in before_events:
                 param = await before_events['list'](matcher)
             else:
-                param = [{'$match': matcher}]
-            sort and param.append({'$sort': sort})
-            param.append({
-                '$facet': {
-                    'total': [{
-                        '$count': "count"
-                    }],
-                    'records': [{
-                        '$project': {
-                            '_id': False
-                        }
-                    }, {
-                        '$skip': pageSize * (page - 1)
-                    }, {
-                        '$limit': pageSize
-                    }]
-                }
-            })
-            param.append({'$project': {
-                'records': "$records",
-                'total': {
-                    '$ifNull': [{
-                        '$arrayElemAt': ["$total.count", 0]
-                    }, 0]
-                },
-            }})
-            result = ((await manager.aggregate(param)) or [{'records': [], 'total': 0}]).pop(0)
+                param = manager.default_query(matcher)
+            manager.index(param, page=page, page_size=pageSize)
+            result = ((await manager.query(param, sort=sort)) or [{'records': [], 'total': 0}]).pop(0)
             if 'list' in after_events:
                 await after_events['list'](param, result['records'])
             return result
@@ -109,18 +87,19 @@ def add_route(router: APIRouter,
         @router.get("/list")
         async def all(request: Request, page: Optional[int] = 1, pageSize: Optional[int] = 0) -> list:
             matcher = await request_body(request)
+            query = matcher.pop('query{}', {})
+            matcher = dict(matcher, **query)
             paged = matcher.pop('page{}', {})
-            page = paged.pop('page', page)
-            pageSize = paged.pop('pageSize', pageSize)
+            page = paged.pop('page', matcher.pop('page', page))
+            pageSize = paged.pop('pageSize', matcher.pop('pageSize', pageSize))
             if not keep_key:
                 matcher = to_lower_camel(matcher)
             sort = matcher.pop('sort{}', None)
             if 'list' in before_events:
                 param = await before_events['list'](matcher)
             else:
-                param = [{'$match': matcher}, {'$project': {'_id': False}}]
-            sort and param.append({'$sort': sort})
-            result = (await manager.aggregate(param, page=page, page_size=pageSize)) or []
+                param = manager.default_query(matcher)
+            result = (await manager.query(param, sort=sort, page=page, page_size=pageSize)) or []
             if 'list' in after_events:
                 await after_events['list'](param, result)
             return result
@@ -132,6 +111,8 @@ def add_route(router: APIRouter,
         @router.get("/get/{id}")
         async def get(request: Request, id: str = None) -> dict:
             matcher = await request_body(request)
+            query = matcher.pop('query{}', {})
+            matcher = dict(matcher, **query)
             if id is None and not matcher and not before_events:
                 return {}
             if not keep_key:
@@ -140,9 +121,8 @@ def add_route(router: APIRouter,
             if 'get' in before_events:
                 param = await before_events['get'](matcher)
             else:
-                param = [{'$match': matcher if not id else dict(matcher, **{'id': id})}]
-            sort and param.append({'$sort': sort})
-            result = ((await manager.aggregate(param)) or [{}]).pop(0)
+                param = manager.default_query(matcher if not id else dict(matcher, **{'id': id}))
+            result = ((await manager.query(param, sort=sort)) or [{}]).pop(0)
             if 'get' in after_events:
                 await after_events['get'](param, result)
             return result
@@ -158,11 +138,11 @@ def add_route(router: APIRouter,
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='参数不能为空')
             if not keep_key:
                 param = to_lower_camel(param)
-            result = await manager.add_or_update(**(await before_events['save'](param) if 'save' in before_events else {
+            result = await manager.save(**(await before_events['save'](param) if 'save' in before_events else {
                 'data': param
             }),
-                                                 keep_key=keep_key,
-                                                 pb=pb)
+                                        keep_key=keep_key,
+                                        pb=pb)
             if 'save' in after_events:
                 await after_events['save'](param, result)
             return result
@@ -178,11 +158,11 @@ def add_route(router: APIRouter,
             if not keep_key:
                 for item in param:
                     item = to_lower_camel(item)
-            result = await manager.batch_add_or_update(**(await before_events['batch'](param) if 'batch' in before_events else {
+            result = await manager.batch_save(**(await before_events['batch'](param) if 'batch' in before_events else {
                 'datas': param
             }),
-                                                       keep_key=keep_key,
-                                                       pb=pb)
+                                              keep_key=keep_key,
+                                              pb=pb)
             if 'batch' in after_events:
                 await after_events['batch'](item, result)
             return True
@@ -205,8 +185,8 @@ def add_route(router: APIRouter,
             if 'distinct' in before_events:
                 param = await before_events['distinct'](matcher)
             else:
-                param = {'matcher': matcher}
-            result = await manager.distinct(key, **param)
+                param = matcher
+            result = await manager.distinct(key, matcher)
             if 'distinct' in after_events:
                 await after_events['distinct'](param, result)
             return result
@@ -220,7 +200,7 @@ class BaseRouter:
 
     def __init__(self,
                  router: APIRouter,
-                 manager: CommonDAHelper,
+                 manager: DaInterface,
                  pb: object = None,
                  keep_key: bool = False,
                  before_events: dict = {},

@@ -63,30 +63,37 @@ class ServiceLocation:
                                                              default_args] if default_args > 0 and i >= total_args - default_args else None)
                     args.update({
                         arg:
-                        arg_config if not isinstance(arg_config, dict) or not arg_config.get('()') else self.build_class(
+                        self.build_value(arg_config) if not isinstance(arg_config, dict) or not arg_config.get('()') else self.build_class(
                             arg_config.get('()'), arg_config)
                     })
         tmp_object = tmp_class(**args)
         for p_name, p_value in config_value.items():
             if p_name == '()' or p_name in args:
                 continue
-            if isinstance(p_value, str) and ('config(' in p_value or 'get(' in p_value or 'env(' in p_value):
-                p = re.compile(r'[(](.*?)[)]', re.S)
-                items = re.findall(p, p_value).pop(0).split(',')
-                name = items.pop(0).strip()
-                if 'config(' in p_value:
-                    p_value = self.config(name)
-                    for key in items:
-                        p_value = p_value.get(key.strip())
-                elif 'get(' in p_value:
-                    p_value = self.get(name)
-                elif 'env(' in p_value:
-                    p_value = env(name)
+            p_value = self.build_value(p_value)
             if hasattr(tmp_object, p_name):
                 setattr(tmp_object, p_name, p_value)
             else:
                 tmp_object.__dict__[p_name] = p_value
         return tmp_object
+
+    def build_value(self, p_value: Any) -> Any:
+        if isinstance(p_value, str) and ('config(' in p_value or 'get(' in p_value or 'env(' in p_value):
+            p = re.compile(r'[(](.*?)[)]', re.S)
+            items = re.findall(p, p_value).pop(0).split(',')
+            name = items.pop(0).strip()
+            if 'config(' in p_value:
+                p_value = self.config(name)
+                for key in items:
+                    p_value = p_value.get(key.strip())
+            elif 'get(' in p_value:
+                p_value = self.get(name)
+                while len(items) > 0:
+                    name = items.pop(0).strip()
+                    p_value = p_value.__dict__.get(name, p_value.__getattribute__(name))
+            elif 'env(' in p_value:
+                p_value = env(name)
+        return p_value
 
 
 service = ServiceLocation()
