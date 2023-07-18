@@ -4,13 +4,13 @@ import inspect
 from json import JSONDecodeError
 import os
 from fastapi import APIRouter, BackgroundTasks, FastAPI, HTTPException, Request, status
-from fastapi.responses import UJSONResponse as _JSONResponse
+from fastapi.responses import ORJSONResponse as _JSONResponse
 from typing import Optional
 from db.da_interface import DaInterface
 from base.functions import to_lower_camel
 
 
-class UJSONResponse(_JSONResponse):
+class JSONResponse(_JSONResponse):
 
     def __init__(
         self,
@@ -25,7 +25,7 @@ class UJSONResponse(_JSONResponse):
         if not msg:
             msg = 'success'
         content = {"code": code, "msg": msg, "data": content}
-        super(UJSONResponse, self).__init__(content, status_code, headers, media_type, background)
+        super(JSONResponse, self).__init__(content, status_code, headers, media_type, background)
 
 
 async def request_body(request: Request, exclude: list = [], with_matcher: bool = True) -> dict:
@@ -207,7 +207,7 @@ class BaseRouter:
                  after_events: dict = {},
                  exclude: list = ['delete']) -> None:
         self._router = router
-        self._router.default_response_class = UJSONResponse
+        self._router.default_response_class = JSONResponse
         add_route(router, manager, pb, keep_key, before_events, after_events, exclude)
 
 

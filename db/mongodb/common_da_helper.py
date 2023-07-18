@@ -40,12 +40,10 @@ class CommonDAHelper(DaInterface):
             for key in [x for x in data.keys()]:
                 if key not in pb_tmp:
                     data.pop(key)
-        time = date_utils.timestamp_second()
         if not pb_tmp.get('id'):
             pb_tmp.update({'id': self.id_generator.generate_id()})
-            pb_tmp.update({create_time_key: time})
-        else:
-            pb_tmp.pop(create_time_key, None)
+        time = date_utils.timestamp_second()
+        pb_tmp.update({create_time_key: time})
         data.update({'update_time' if keep_key else 'updateTime': time})
         return data, pb_tmp
 
