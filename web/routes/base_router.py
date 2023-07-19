@@ -75,8 +75,7 @@ def add_route(router: APIRouter,
                 param = await before_events['list'](matcher)
             else:
                 param = manager.default_query(matcher)
-            manager.index(param, page=page, page_size=pageSize)
-            result = ((await manager.query(param, sort=sort)) or [{'records': [], 'total': 0}]).pop(0)
+            result = await manager.index(param, page=page, page_size=pageSize, sort=sort)
             if 'list' in after_events:
                 await after_events['list'](param, result['records'])
             return result
@@ -134,15 +133,12 @@ def add_route(router: APIRouter,
         @router.post("/save")
         async def update(request: Request) -> dict:
             param = await request_body(request, with_matcher=False)
-            if not param:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='参数不能为空')
             if not keep_key:
                 param = to_lower_camel(param)
-            result = await manager.save(**(await before_events['save'](param) if 'save' in before_events else {
-                'data': param
-            }),
-                                        keep_key=keep_key,
-                                        pb=pb)
+            param = (await before_events['save'](param) if 'save' in before_events else {'data': param})
+            if not param:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='参数不能为空')
+            result = await manager.save(**param, keep_key=keep_key, pb=pb)
             if 'save' in after_events:
                 await after_events['save'](param, result)
             return result
@@ -152,20 +148,35 @@ def add_route(router: APIRouter,
         @router.post("/batch_save")
         async def batch_update(request: Request) -> bool:
             param = await request_body(request, with_matcher=False)
-            if not param:
-                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='参数不能为空')
-
             if not keep_key:
                 for item in param:
                     item = to_lower_camel(item)
-            result = await manager.batch_save(**(await before_events['batch'](param) if 'batch' in before_events else {
-                'datas': param
-            }),
-                                              keep_key=keep_key,
-                                              pb=pb)
+            param = (await before_events['batch'](param) if 'batch' in before_events else {'datas': param})
+            if not param:
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='参数不能为空')
+            result = await manager.batch_save(**param, keep_key=keep_key, pb=pb)
             if 'batch' in after_events:
                 await after_events['batch'](item, result)
             return True
+
+    if 'count' not in exclude:
+
+        @router.get("/count")
+        @router.post("/count")
+        async def count(request: Request) -> int:
+            matcher = await request_body(request)
+            query = matcher.pop('query{}', {})
+            matcher = dict(matcher, **query)
+            if not keep_key:
+                matcher = to_lower_camel(matcher)
+            if 'count' in before_events:
+                param = await before_events['count'](matcher)
+            else:
+                param = manager.default_query(matcher)
+            result = await manager.count_query(param)
+            if 'count' in after_events:
+                await after_events['count'](param, result)
+            return result
 
     if 'delete' not in exclude:
 

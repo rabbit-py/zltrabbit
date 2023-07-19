@@ -35,11 +35,15 @@ class DaInterface(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    def index(self, param: List = [], page: int = 1, page_size: int = 20):
+    async def index(self, param: List = [], page: int = 1, page_size: int = 20, sort={}) -> dict:
         pass
 
     @abstractmethod
     def default_query(self, matcher: dict) -> dict:
+        pass
+
+    @abstractmethod
+    async def count_query(self, param: List) -> int:
         pass
 
     @abstractmethod

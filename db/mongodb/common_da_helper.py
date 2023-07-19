@@ -122,7 +122,9 @@ class CommonDAHelper(DaInterface):
     async def distinct(self, key: str, matcher: dict = {}) -> List:
         return await self.collection.find(matcher).distinct(key)
 
-    def index(self, param: List = [], page: int = 1, page_size: int = 20) -> None:
+    async def index(self, param: List = [], page: int = 1, page_size: int = 20, sort={}) -> dict:
+        if sort:
+            param.append({'$sort': sort})
         param.append({
             '$facet': {
                 'total': [{
@@ -147,9 +149,14 @@ class CommonDAHelper(DaInterface):
                 }, 0]
             },
         }})
+        return ((await self.query(param)) or [{'records': [], 'total': 0}]).pop(0)
 
     def default_query(self, matcher: dict) -> dict:
         return [{'$match': matcher}]
+
+    async def count_query(self, param: List) -> int:
+        param.append({'$group': {"_id": None, "count": {"$sum": 1}}})
+        return (await self.query(param) or [{'count': 0}]).pop(0).get('count', 0)
 
     async def query(self, pipeline: List = [], sort={}, page: int = 1, page_size: int = 0) -> List:
         if sort:
