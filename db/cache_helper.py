@@ -1,8 +1,10 @@
 # -*- coding: utf-8 -*-
 
 from abc import ABCMeta, abstractmethod
+import asyncio
 from functools import wraps
 from hashlib import md5
+import time
 from typing import (Any, Awaitable, Callable, Optional, Tuple)
 from loguru import logger
 from base.coroutine.shared import shared
@@ -29,6 +31,37 @@ class CacheInterface(metaclass=ABCMeta):
     @abstractmethod
     async def delete(self, key: str) -> Optional[int]:
         pass
+
+
+class MemoryCache(CacheInterface):
+    cache_map: dict = {}
+
+    async def get_with_ttl(self, key: str) -> Tuple[int, Optional[bytes]]:
+        result = MemoryCache.cache_map.get(key, None)
+        if result is None:
+            return 0, result
+        ttl, set_time, value = result
+        return set_time + ttl - int(time.time()) if ttl > 0 else ttl, value
+
+    async def get(self, key: str) -> Optional[bytes]:
+        _, _, result = MemoryCache.cache_map.get(key, None)
+        return result
+
+    async def set(self, key: str, value: Any, expire: Optional[float] = None) -> None:
+        MemoryCache.cache_map[key] = (expire or 0, int(time.time()), value)
+        if expire and expire > 0:
+
+            async def ttl():
+                await asyncio.sleep(expire)
+                await self.delete(key)
+
+            asyncio.get_running_loop().create_task(ttl())
+
+    async def delete(self, key: str) -> Optional[int]:
+        _, _, result = MemoryCache.cache_map.pop(key, None)
+        if result:
+            return 1
+        return 0
 
 
 def cache(key: Any, name: str = 'cache.default', expire: float = None, coder: CoderInterface = ORJSONCoder) -> Callable[P, Awaitable[R]]:
