@@ -23,7 +23,7 @@ class RedisManager(BaseService):
 
 class RedisCache(CacheInterface):
 
-    def __init__(self, redis: Union[AbstractRedis, AbstractRedisCluster], prefix: str = 'rabbit-cache') -> None:
+    def __init__(self, redis: Union[AbstractRedis, AbstractRedisCluster], prefix: str = 'cache') -> None:
         self.redis = redis
         self.prefix = prefix
         self.is_cluster = isinstance(redis, AbstractRedisCluster)
@@ -37,7 +37,7 @@ class RedisCache(CacheInterface):
         return await self.redis.get(f"{self.prefix}:{key}")
 
     async def set(self, key: str, value: Any, expire: Optional[float] = None) -> None:
-        await self.redis.set(f"{self.prefix}:{key}", value, ex=expire)
+        await self.redis.set(f"{self.prefix}:{key}", value, ex=expire or None)
 
     async def delete(self, key: str) -> Optional[int]:
         return await self.redis.delete(f"{self.prefix}:{key}")
@@ -49,7 +49,7 @@ def redis_lock(key: Any, name: str = 'redis.default', timeout: float = 10) -> Ca
 
         @wraps(func)
         async def wrapper_function(*args: P.args, **kwargs: P.kwargs) -> R:
-            async with Lock(await service.get(name).client, key, timeout=timeout):
+            async with Lock(service.get(name).client, key, timeout=timeout):
                 logger.info('redis_lock: %s' % key)
                 return await func(*args, **kwargs)
 

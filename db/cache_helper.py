@@ -3,11 +3,10 @@
 from abc import ABCMeta, abstractmethod
 import asyncio
 from functools import wraps
-from hashlib import md5
 import time
 from typing import (Any, Awaitable, Callable, Optional, Tuple)
 from loguru import logger
-from base.coroutine.shared import shared
+from base.coroutine.shared import shared, key_builder
 from base.di.service_location import service
 from base.coder.coder_interface import CoderInterface
 from base.coder.json_coder import ORJSONCoder
@@ -64,17 +63,19 @@ class MemoryCache(CacheInterface):
         return 0
 
 
-def cache(key: Any, name: str = 'cache.default', expire: float = None, coder: CoderInterface = ORJSONCoder) -> Callable[P, Awaitable[R]]:
+def cache(key: Any = None,
+          name: str = 'cache.default',
+          expire: float = None,
+          coder: CoderInterface = ORJSONCoder,
+          prefix: str = '') -> Callable[P, Awaitable[R]]:
 
     def wrapper(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
 
+        @shared(coder=coder, prefix=prefix)
         @wraps(func)
-        @shared(key=key, coder=coder)
         async def wrapper_function(*args: P.args, **kwargs: P.kwargs) -> R:
+            new_key = key_builder(func, args, kwargs, key, coder, prefix)
             cache_obj = service.get(name)
-            new_key = coder.encode(key).decode()
-            if '.' in new_key or len(new_key) > 32:
-                new_key = md5(new_key.encode("utf-8")).hexdigest()
             try:
                 ttl, result = await cache_obj.get_with_ttl(new_key)
                 result = coder.decode(result) if result is not None else None

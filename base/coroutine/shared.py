@@ -2,6 +2,7 @@
 
 from functools import wraps
 from hashlib import md5
+import inspect
 from typing import (Any, Awaitable, Callable)
 from base.coder.coder_interface import CoderInterface
 from base.coder.json_coder import ORJSONCoder
@@ -29,15 +30,28 @@ class Share(BaseService):
         return obj
 
 
-def shared(key: Any, timeout: float = 3, coder: CoderInterface = ORJSONCoder) -> Callable[P, Awaitable[R]]:
+def key_builder(func: Callable[P, Awaitable[R]],
+                args: list,
+                kwargs: dict,
+                key: Any = None,
+                coder: CoderInterface = ORJSONCoder,
+                prefix: str = '') -> str:
+    ordered_kwargs = sorted(kwargs.items())
+    sig = inspect.signature(func)
+    tmp_param = (func.__module__ or "") + '.' + func.__name__ + str(args[1:] if 'self' in sig.parameters else args) + str(ordered_kwargs)
+    new_key = coder.encode(key or coder.encode(tmp_param).decode()).decode()
+    if '.' in new_key or len(new_key) > 32:
+        new_key = md5(new_key.encode("utf-8")).hexdigest()
+    return f'{prefix}:{new_key}' if prefix else new_key
+
+
+def shared(key: Any = None, timeout: float = 3, coder: CoderInterface = ORJSONCoder, prefix: str = '') -> Callable[P, Awaitable[R]]:
 
     def wrapper(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
 
         @wraps(func)
         async def wrapper_function(*args: P.args, **kwargs: P.kwargs) -> R:
-            new_key = coder.encode(key).decode()
-            if '.' in new_key or len(new_key) > 32:
-                new_key = md5(new_key.encode("utf-8")).hexdigest()
+            new_key = key_builder(func, args, kwargs, key, coder, prefix)
             shared_obj = Share.get_share(new_key)
             try:
                 await shared_obj.channel.push(new_key, timeout)
