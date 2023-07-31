@@ -89,8 +89,8 @@ def add_route(router: APIRouter,
             query = matcher.pop('query{}', {})
             matcher = dict(matcher, **query)
             paged = matcher.pop('page{}', {})
-            page = paged.pop('page', matcher.pop('page', page))
-            pageSize = paged.pop('pageSize', matcher.pop('pageSize', pageSize))
+            page = int(paged.pop('page', matcher.pop('page', page)))
+            pageSize = int(paged.pop('pageSize', matcher.pop('pageSize', pageSize)))
             if not keep_key:
                 matcher = to_lower_camel(matcher)
             sort = matcher.pop('sort{}', None)

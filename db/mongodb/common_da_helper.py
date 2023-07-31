@@ -3,7 +3,6 @@
 from typing import List, Tuple
 
 from pymongo import ReturnDocument, UpdateOne
-from pymongo.results import BulkWriteResult, DeleteResult
 from base.data_transform import protobuf_transformer
 from base.util import date_utils
 from base.di.service_location import service

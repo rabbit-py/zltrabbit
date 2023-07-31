@@ -2,16 +2,17 @@
 
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
-from base.coroutine.context import context
 from base.di.service_location import service
 from base.functions import env
 from web.routes.base_router import JSONResponse
+from base.coroutine.context import context
 from web.routes.request_context import request_context
 
 
 class RequestContextMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint):
+        context.clear()
         context.set('message_id', service.id_generator.generate_id())
         request_context.set(request)
         try:

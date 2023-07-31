@@ -81,7 +81,7 @@ def cache(key: Any = None,
                 result = coder.decode(result) if result is not None else None
             except Exception:
                 logger.warning(
-                    f"Error retrieving cache key={str(new_key)}",
+                    f"Error retrieving cache={name} key={str(new_key)}",
                     exc_info=True,
                 )
                 ttl, result = 0, None
@@ -91,11 +91,11 @@ def cache(key: Any = None,
                     await cache_obj.set(new_key, coder.encode(result), expire)
                 except Exception:
                     logger.warning(
-                        f"Error setting cache key={str(new_key)}",
+                        f"Error setting cache={name} key={str(new_key)}",
                         exc_info=True,
                     )
             else:
-                logger.info(f"Get key={str(new_key)} from Cache ttl={ttl}")
+                logger.info(f"Get key={str(new_key)} from Cache={name} ttl={ttl}")
             return result
 
         return wrapper_function

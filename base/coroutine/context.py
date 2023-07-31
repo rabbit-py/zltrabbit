@@ -19,9 +19,12 @@ class Context:
     def set(self, key: str, val: Any) -> None:
         self._common_ctx_var.get().update({key: val})
 
+    def clear(self) -> None:
+        self._common_ctx_var.set({})
+
     def remove(self, key: str) -> None:
         data = self._common_ctx_var.get()
-        key in data and data.pop(key)
+        data.pop(key, None)
 
 
 context = Context()

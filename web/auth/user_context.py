@@ -16,11 +16,17 @@ class UserContext:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='User not found')
         return id
 
-    def get(self) -> dict:
-        return context.get('request_user', {}).get('data', {})
+    def get(self, key: str = None, default: Any = None) -> dict:
+        data = context.get('request_user', {}).get('data', {})
+        if key:
+            return data.get(key, default)
+        return data
 
     def set(self, user: dict) -> None:
         context.set('request_user', user)
+
+    def remove(self) -> None:
+        context.remove('request_user')
 
     def __getattr__(self, key) -> Any:
         return context.get('request_user', {}).get('data', {}).get(key)
