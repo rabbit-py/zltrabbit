@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 from typing import Any
+
+from base.di.service_location import service
 from .coder_interface import CoderInterface
 try:
     import ujson
@@ -34,3 +36,6 @@ class ORJSONCoder(CoderInterface):
     @classmethod
     def decode(cls, value: bytes) -> Any:
         return orjson.loads(value)
+
+
+json_coder = service.json_coder
