@@ -55,6 +55,7 @@ def add_route(router: APIRouter,
               keep_key: bool,
               before_events: dict = {},
               after_events: dict = {},
+              cached: dict = {},
               exclude: list = []) -> None:
 
     if 'index' not in exclude:
@@ -75,7 +76,7 @@ def add_route(router: APIRouter,
                 param = await before_events['list'](matcher)
             else:
                 param = manager.default_query(matcher)
-            result = await manager.index(param, page=page, page_size=pageSize, sort=sort)
+            result = await manager.index(param, page=page, page_size=pageSize, sort=sort, cached=cached.get('distinct'))
             if 'list' in after_events:
                 await after_events['list'](param, result['records'])
             return result
@@ -98,7 +99,7 @@ def add_route(router: APIRouter,
                 param = await before_events['list'](matcher)
             else:
                 param = manager.default_query(matcher)
-            result = (await manager.query(param, sort=sort, page=page, page_size=pageSize)) or []
+            result = (await manager.query(param, sort=sort, page=page, page_size=pageSize, cached=cached.get('distinct'))) or []
             if 'list' in after_events:
                 await after_events['list'](param, result)
             return result
@@ -121,7 +122,7 @@ def add_route(router: APIRouter,
                 param = await before_events['get'](matcher)
             else:
                 param = manager.default_query(matcher if not id else dict(matcher, **{'id': id}))
-            result = ((await manager.query(param, sort=sort)) or [{}]).pop(0)
+            result = ((await manager.query(param, sort=sort, cached=cached.get('distinct'))) or [{}]).pop(0)
             if 'get' in after_events:
                 await after_events['get'](param, result)
             return result
@@ -173,7 +174,7 @@ def add_route(router: APIRouter,
                 param = await before_events['count'](matcher)
             else:
                 param = manager.default_query(matcher)
-            result = await manager.count_query(param)
+            result = await manager.count_query(param, cached=cached.get('distinct'))
             if 'count' in after_events:
                 await after_events['count'](param, result)
             return result
@@ -197,7 +198,7 @@ def add_route(router: APIRouter,
                 param = await before_events['distinct'](matcher)
             else:
                 param = matcher
-            result = await manager.distinct(key, matcher)
+            result = await manager.distinct(key, matcher, cached=cached.get('distinct'))
             if 'distinct' in after_events:
                 await after_events['distinct'](param, result)
             return result
@@ -216,10 +217,11 @@ class BaseRouter:
                  keep_key: bool = False,
                  before_events: dict = {},
                  after_events: dict = {},
+                 cached: dict = {},
                  exclude: list = ['delete']) -> None:
         self._router = router
         self._router.default_response_class = JSONResponse
-        add_route(router, manager, pb, keep_key, before_events, after_events, exclude)
+        add_route(router, manager, pb, keep_key, before_events, after_events, cached, exclude)
 
 
 def auto_import(path: str, app: FastAPI) -> None:

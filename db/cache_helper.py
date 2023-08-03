@@ -74,6 +74,8 @@ def cache(key: Any = None,
         @shared(coder=coder, prefix=prefix)
         @wraps(func)
         async def wrapper_function(*args: P.args, **kwargs: P.kwargs) -> R:
+            if expire and expire < 0:
+                return await func(*args, **kwargs)
             new_key = key_builder(func, args, kwargs, key, coder, prefix)
             cache_obj = service.get(name)
             try:

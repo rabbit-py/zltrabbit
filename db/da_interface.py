@@ -35,7 +35,7 @@ class DaInterface(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    async def index(self, param: List = [], page: int = 1, page_size: int = 20, sort={}) -> dict:
+    async def index(self, param: List = [], page: int = 1, page_size: int = 20, sort={}, cached: dict = None) -> dict:
         pass
 
     @abstractmethod
@@ -43,13 +43,13 @@ class DaInterface(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    async def count_query(self, param: List) -> int:
+    async def count_query(self, param: List, cached: dict = None) -> int:
         pass
 
     @abstractmethod
-    async def query(self, pipeline: List = [], sort={}, page: int = 1, page_size: int = 0):
+    async def query(self, pipeline: List = [], sort={}, page: int = 1, page_size: int = 0, cached: dict = None) -> List:
         pass
 
     @abstractmethod
-    async def distinct(self, key: str, matcher: dict = {}) -> List:
+    async def distinct(self, key: str, matcher: dict = {}, cached: dict = None) -> List:
         pass
