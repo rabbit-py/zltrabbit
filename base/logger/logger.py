@@ -4,6 +4,8 @@ import sys
 from loguru import logger
 from uuid import uuid1
 
+from base.functions import env
+
 from ..coroutine.context import context
 from ..di.service_location import service
 
@@ -26,7 +28,7 @@ def loguru_setup() -> None:
         'format',
         "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | {extra[request_id]} | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | <level>{message}</level>"
     )
-    sys.tracebacklimit = int(config.get('tracebacklimit', 2)) or None
+    sys.tracebacklimit = config.get('tracebacklimit', None if env('DEBUG') else 2)
     logger.remove()
     logger.add(sys.stderr,
                format=custom_format,

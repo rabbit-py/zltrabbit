@@ -31,7 +31,7 @@ class CommonDAHelper(DaInterface):
 
     def prefix_data(self, data: dict, keep_key: bool = False, pb: object = None) -> Tuple:
         pb_tmp = {'id': data.pop('id', None)}
-        create_time_key = 'create_time' if keep_key else 'createTime'
+        create_time_key = 'create_time' if keep_key and 'create_time' in data else 'createTime'
         data.pop(create_time_key, None)
         if pb is not None:
             pb_tmp = dict(
@@ -44,7 +44,7 @@ class CommonDAHelper(DaInterface):
             pb_tmp.update({'id': self.id_generator.generate_id()})
         time = date_utils.timestamp_second()
         pb_tmp.update({create_time_key: time})
-        data.update({'update_time' if keep_key else 'updateTime': time})
+        data.update({'update_time' if keep_key and 'update_time' in data else 'updateTime': time})
         return data, pb_tmp
 
     async def save(self, data: dict, matcher: dict = None, projection={}, keep_key: bool = False, pb: object = None) -> dict:
