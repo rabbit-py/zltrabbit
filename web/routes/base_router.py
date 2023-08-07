@@ -76,7 +76,7 @@ def add_route(router: APIRouter,
                 param = await before_events['list'](matcher)
             else:
                 param = manager.default_query(matcher)
-            result = await manager.index(param, page=page, page_size=pageSize, sort=sort, cached=cached.get('distinct'))
+            result = await manager.index(param, page=page, page_size=pageSize, sort=sort, cached=cached.get('index'))
             if 'list' in after_events:
                 await after_events['list'](param, result['records'])
             return result
@@ -99,7 +99,7 @@ def add_route(router: APIRouter,
                 param = await before_events['list'](matcher)
             else:
                 param = manager.default_query(matcher)
-            result = (await manager.query(param, sort=sort, page=page, page_size=pageSize, cached=cached.get('distinct'))) or []
+            result = (await manager.query(param, sort=sort, page=page, page_size=pageSize, cached=cached.get('list'))) or []
             if 'list' in after_events:
                 await after_events['list'](param, result)
             return result
@@ -122,7 +122,7 @@ def add_route(router: APIRouter,
                 param = await before_events['get'](matcher)
             else:
                 param = manager.default_query(matcher if not id else dict(matcher, **{'id': id}))
-            result = ((await manager.query(param, sort=sort, cached=cached.get('distinct'))) or [{}]).pop(0)
+            result = ((await manager.query(param, sort=sort, cached=cached.get('get'))) or [{}]).pop(0)
             if 'get' in after_events:
                 await after_events['get'](param, result)
             return result
