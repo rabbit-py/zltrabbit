@@ -15,6 +15,10 @@ class DaInterface(metaclass=ABCMeta):
         pass
 
     @abstractmethod
+    async def updateAll(self, data: dict, matcher: dict) -> int:
+        pass
+
+    @abstractmethod
     async def get(self, id: str = None, matcher: dict = {}, projection: dict = {}, sort: list = [], **kwargs) -> dict:
         pass
 
@@ -28,6 +32,10 @@ class DaInterface(metaclass=ABCMeta):
 
     @abstractmethod
     async def delete(self, id: str = None, matcher: dict = {}) -> int:
+        pass
+
+    @abstractmethod
+    async def deleteAll(self, matcher: dict = {}) -> int:
         pass
 
     @abstractmethod

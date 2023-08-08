@@ -47,6 +47,9 @@ class CommonDAHelper(DaInterface):
         data.update({'update_time' if keep_key and 'update_time' in data else 'updateTime': time})
         return data, pb_tmp
 
+    async def updateAll(self, data: dict, matcher: dict) -> int:
+        return (await self.collection.update_many(matcher, {'$set': data})).modified_count
+
     async def save(self, data: dict, matcher: dict = None, projection={}, keep_key: bool = False, pb: object = None) -> dict:
         data, pb_tmp = self.prefix_data(data, keep_key, pb)
         if matcher is None:
@@ -103,6 +106,11 @@ class CommonDAHelper(DaInterface):
         if not matcher:
             return
         return (await self.collection.delete_one(matcher)).deleted_count
+
+    async def deleteAll(self, matcher: dict) -> int:
+        if not matcher:
+            return
+        return (await self.collection.delete_many(matcher)).deleted_count
 
     async def batch_delete(self, matcher: dict = {}) -> int:
         return (await self.collection.delete_many(matcher)).deleted_count
