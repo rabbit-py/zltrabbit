@@ -57,7 +57,7 @@ def shared(key: Any = None, timeout: float = 3, coder: CoderInterface = ORJSONCo
                 await shared_obj.channel.push(new_key, timeout)
                 if Share.share_map.get(new_key) is None:
                     return shared_obj.result
-                shared_obj.data = await func(*args, **kwargs)
+                shared_obj.data = (await func(*args, **kwargs)) if inspect.iscoroutinefunction(func) else func(*args, **kwargs)
                 return shared_obj.result
             except Exception as e:
                 raise e

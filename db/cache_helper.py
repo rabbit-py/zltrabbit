@@ -3,6 +3,7 @@
 from abc import ABCMeta, abstractmethod
 import asyncio
 from functools import wraps
+from inspect import iscoroutinefunction
 import time
 from typing import (Any, Awaitable, Callable, Optional, Tuple)
 from loguru import logger
@@ -88,7 +89,7 @@ def cache(key: Any = None,
                 )
                 ttl, result = 0, None
             if result is None:
-                result = await func(*args, **kwargs)
+                result = (await func(*args, **kwargs)) if iscoroutinefunction(func) else func(*args, **kwargs)
                 try:
                     await cache_obj.set(new_key, coder.encode(result), expire)
                 except Exception:
