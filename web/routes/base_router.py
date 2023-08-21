@@ -72,13 +72,15 @@ def add_route(router: APIRouter,
             if not keep_key:
                 matcher = to_lower_camel(matcher)
             sort = matcher.pop('sort{}', None)
-            if 'list' in before_events:
-                param = await before_events['list'](matcher)
+            if 'index' in before_events:
+                param = (await before_events['index']
+                         (matcher)) if inspect.iscoroutinefunction(before_events['index']) else before_events['index'](matcher)
             else:
                 param = manager.default_query(matcher)
             result = await manager.index(param, page=page, page_size=pageSize, sort=sort, cached=cached.get('index'))
-            if 'list' in after_events:
-                await after_events['list'](param, result['records'])
+            if 'index' in after_events:
+                (await after_events['index'](param, result['records'])) if inspect.iscoroutinefunction(
+                    after_events['index']) else after_events['index'](param, result['records'])
             return result
 
     if 'list' not in exclude:
