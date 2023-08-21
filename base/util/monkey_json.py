@@ -4,12 +4,19 @@ import datetime
 from ipaddress import IPv4Address
 import json
 from typing import Any
-import ujson
-import orjson
+try:
+    import ujson
+except ImportError:  # pragma: nocover
+    ujson = None  # type: ignore
+
+try:
+    import orjson
+except ImportError:  # pragma: nocover
+    orjson = None  # type: ignore
 
 
 class UJSONEncoder(json.JSONEncoder):
-
+    
     def default(self, o: Any) -> Any:
         try:
             if isinstance(o, datetime.datetime):
@@ -29,6 +36,7 @@ class UJSONEncoder(json.JSONEncoder):
             return json.JSONEncoder.default(self, o)
 
     def encode(self, o: Any) -> str:
+        assert ujson is not None, "ujson must be installed to use UJSONCoder"
         try:
             return self.default(o)
         except TypeError:
@@ -64,6 +72,7 @@ class ORJSONEncoder(json.JSONEncoder):
 def monkey_patch_json(name: str = 'orjson') -> None:
     json.__name__ = name
     if name == 'orjson':
+        assert orjson is not None, "orjson must be installed to use ORJSONCoder"
         json._default_encoder = ORJSONEncoder(skipkeys=False,
                                               ensure_ascii=False,
                                               check_circular=True,
@@ -73,6 +82,7 @@ def monkey_patch_json(name: str = 'orjson') -> None:
                                               separators=None,
                                               default=None)
     else:
+        assert ujson is not None, "ujson must be installed to use UJSONCoder"
         json._default_encoder = UJSONEncoder(
             skipkeys=False,
             ensure_ascii=False,
