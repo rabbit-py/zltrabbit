@@ -1,0 +1,11 @@
+fastapi[all]
+httpx
+motor
+protobuf
+python-Levenshtein
+pytz
+aiofiles
+loguru
+pyjwt
+redis[hiredis]
+passlib
