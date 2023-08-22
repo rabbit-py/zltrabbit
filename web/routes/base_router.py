@@ -187,8 +187,8 @@ def add_route(router: APIRouter,
             if not keep_key:
                 matcher = to_lower_camel(matcher)
             if 'count' in before_events:
-                param = (await before_events['count'](matcher)) if inspect.iscoroutinefunction(
-                    before_events['count']) else inspect.iscoroutinefunction(before_events['count'])
+                param = (await before_events['count']
+                         (matcher)) if inspect.iscoroutinefunction(before_events['count']) else before_events['count'](matcher)
             else:
                 param = manager.default_query(matcher)
             result = await manager.count_query(param, cached=cached.get('distinct'))
