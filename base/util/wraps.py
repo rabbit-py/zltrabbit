@@ -33,7 +33,7 @@ def retry(times=3, raise_except=True) -> Callable[P, Awaitable[R]]:
     return wrapper
 
 
-def async_no_wait(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
+def async_nowait(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
 
     @wraps(func)
     async def wrapper_function(*args: P.args, **kwargs: P.kwargs) -> R:
