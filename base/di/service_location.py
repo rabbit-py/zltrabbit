@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 
 import importlib
+import os
 import re
-import component
 import yaml
 from typing import Any
 from ..functions import env
@@ -10,7 +10,8 @@ from ..functions import env
 
 class ServiceLocation:
 
-    def __init__(self) -> None:
+    def __init__(self, path: str = 'configs') -> None:
+        self.path = path
         self.configs = {}
         self.sl_map = {}
         self.refresh()
@@ -18,11 +19,17 @@ class ServiceLocation:
     def __getattr__(self, key: str) -> Any:
         return self.get(key)
 
-    def refresh(self) -> None:
-        for service in component.config.values():
-            with open(service, mode='r', encoding='utf-8') as f:
-                data = yaml.load(stream=f, Loader=yaml.FullLoader)
-                self.configs = dict(self.configs, **data)
+    def refresh(self, path: str = None) -> None:
+        if path is None:
+            path = self.path
+        for file in os.listdir(path):
+            file_path = os.path.join(path, file)
+            if os.path.isdir(file_path):
+                self.refresh(file_path)
+            else:
+                with open(file_path, mode='r', encoding='utf-8') as f:
+                    data = yaml.load(stream=f, Loader=yaml.FullLoader)
+                    self.configs = dict(self.configs, **data)
 
     def get(self, name: str, data: dict = {}, only_config: bool = False) -> Any:
         if only_config:
@@ -96,7 +103,7 @@ class ServiceLocation:
         return p_value
 
 
-service = ServiceLocation()
+service = ServiceLocation(env('CONFIG_PATH', 'configs'))
 
 
 def config(name: str, default: Any = None) -> Any:
