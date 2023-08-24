@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import inspect
 from fastapi import FastAPI, status
 from starlette.exceptions import HTTPException
 from fastapi.exceptions import RequestValidationError
@@ -31,8 +32,8 @@ def register_base(app: FastAPI, *args) -> None:
         return JSONResponse(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, code=status.HTTP_422_UNPROCESSABLE_ENTITY, msg=str(exc))
 
     @app.on_event("startup")
-    def startup_event():
+    async def startup_event():
         service.refresh()
         for func in args:
-            func()
+            await func() if inspect.iscoroutinefunction(func) else func()
         auto_import(env('ROUTE_PATH'), app)
