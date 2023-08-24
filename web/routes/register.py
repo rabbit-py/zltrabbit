@@ -12,7 +12,7 @@ from web.routes.base_router import JSONResponse
 from web.routes.base_router import auto_import
 
 
-def register_base(app: FastAPI, *args) -> None:
+def register_base(app: FastAPI, before_import: list = [], after_import: list = []) -> None:
 
     app.add_middleware(
         CORSMiddleware,
@@ -34,6 +34,15 @@ def register_base(app: FastAPI, *args) -> None:
     @app.on_event("startup")
     async def startup_event():
         service.refresh()
-        for func in args:
-            await func() if inspect.iscoroutinefunction(func) else func()
+        for func in before_import:
+            if inspect.isfunction(func):
+                await func() if inspect.iscoroutinefunction(func) else func()
+            elif isinstance(func, tuple):
+                await func[0](**func[1]) if inspect.iscoroutinefunction(func[0]) else func[0](**func[1])
+
         auto_import(env('ROUTE_PATH'), app)
+        for func in after_import:
+            if inspect.isfunction(func):
+                await func() if inspect.iscoroutinefunction(func) else func()
+            elif isinstance(func, tuple):
+                await func[0](**func[1]) if inspect.iscoroutinefunction(func[0]) else func[0](**func[1])
