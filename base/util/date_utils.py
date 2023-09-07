@@ -8,7 +8,7 @@ import pytz
 import time
 from datetime import datetime, timedelta
 
-# import maya
+import maya
 
 TIMEZONE_SHANGHAI = 'Asia/Shanghai'
 TIMEZONE_UTC = 'utc'
@@ -31,24 +31,21 @@ def timestamp_to_string(timestamp: Union[int, float], fmt: str = "%Y-%m-%d %H:%M
         fromtz = pytz.timezone(TIMEZONE_UTC)
     if totz is None:
         totz = pytz.timezone(TIMEZONE_SHANGHAI)
-    date = datetime.fromtimestamp(timestamp).replace(tzinfo=fromtz).astimezone(totz)
+    date = datetime.fromtimestamp(timestamp).replace(
+        tzinfo=fromtz).astimezone(totz)
     return date.strftime(fmt)
 
 
 def string_to_timestamp(date: str, fmt: str = "%Y-%m-%d %H:%M:%S", fromtz: str = None, totz: str = None) -> float:
-    if fromtz is None:
-        fromtz = pytz.timezone(TIMEZONE_UTC)
-    if totz is None:
-        totz = pytz.timezone(TIMEZONE_SHANGHAI)
+    fromtz = pytz.timezone(fromtz or TIMEZONE_UTC)
+    totz = pytz.timezone(totz or TIMEZONE_SHANGHAI)
     date = datetime.strptime(date, fmt).replace(tzinfo=fromtz).astimezone(totz)
     return date.timestamp()
 
 
 def strtotime(date: str, fromtz: str = None, totz: str = None) -> int:
-    if fromtz is None:
-        fromtz = pytz.timezone(TIMEZONE_UTC)
-    if totz is None:
-        totz = pytz.timezone(TIMEZONE_SHANGHAI)
+    fromtz = pytz.timezone(fromtz or TIMEZONE_UTC)
+    totz = pytz.timezone(totz or TIMEZONE_SHANGHAI)
     fmt = date
     for i in ['%Y', '%m', '%H', '%M', '%S']:
         fmt = re.sub(r'\d+', i, fmt, 1)
@@ -76,7 +73,8 @@ def get_date_range(start: Union[int, float], end: Union[int, float]) -> list:
     _start_time = start
     while _start_time < end:
         date = datetime.fromtimestamp(_start_time).strftime("%m-%d")
-        sort_date = datetime.fromtimestamp(_start_time).strftime("%Y-%m-%d %H:%M:%S")
+        sort_date = datetime.fromtimestamp(
+            _start_time).strftime("%Y-%m-%d %H:%M:%S")
         time_ranges.append(TimeRange(date, sort_date))
         _start_time += ONE_DAY
     return time_ranges
@@ -102,7 +100,8 @@ def convert_timestamp_to_date(timestamp: Union[int, float]) -> str:
 
 
 def get_time_ranges(start_time: Union[int, float], end_time: Union[int, float], fmt: str = "%Y-%m-%d") -> list:
-    TimeRange = collections.namedtuple("TimeRange", ["start_time", "end_time", "start_date", "end_date"])
+    TimeRange = collections.namedtuple(
+        "TimeRange", ["start_time", "end_time", "start_date", "end_date"])
     shanghai = pytz.timezone(TIMEZONE)
     delta = timedelta(1)
 
@@ -125,7 +124,8 @@ def get_time_ranges(start_time: Union[int, float], end_time: Union[int, float], 
         next_date = start_date + delta
         start_time = start_date.timestamp()
         next_time = next_date.timestamp()
-        ret.append(TimeRange(start_time, next_time, start_date.strftime(fmt), next_date.strftime(fmt)))
+        ret.append(TimeRange(start_time, next_time,
+                   start_date.strftime(fmt), next_date.strftime(fmt)))
         start_date = start_date + delta
         next_date = next_date + delta
         interval_days -= 1
@@ -153,7 +153,8 @@ def get_date_zero_timestamp(date=None, days=0):
     if not isinstance(date, type(now)):
         raise Exception("传参类型为: {}, 需要参数和为: {}".format(type(date), type(now)))
     timestamp = date.datetime(to_timezone=TIMEZONE_SHANGHAI)
-    timestamp = int(timestamp.timestamp()) - date.hour * ONE_HOUR - date.minute * ONE_MINUTE - date.second - days * ONE_DAY
+    timestamp = int(timestamp.timestamp()) - date.hour * ONE_HOUR - \
+        date.minute * ONE_MINUTE - date.second - days * ONE_DAY
     return timestamp
 
 
@@ -198,37 +199,14 @@ def timestamp_millisecond():
     return int(time.time() * 1000)
 
 
-def date_to_timestamp_second(date, str_format: str = '%Y-%m-%d %H:%M:%S'):
-    """
-    秒级时间戳(十位)
-    """
-    if date is None or len(date) == 0:
-        return None
-
-    try:
-        timeArray = time.strptime(date, str_format)
-        timeStamp = int(time.mktime(timeArray))
-        return timeStamp
-    except Exception as e:
-        print(e)
-    return None
-
-
-def date_to_timestamp_second_tz(date, tz=TIMEZONE_UTC, str_format: str = '%Y-%m-%d %H:%M:%S'):
+def date_to_timestamp_second(date, fromtz=TIMEZONE_SHANGHAI, totz=TIMEZONE_SHANGHAI):
     """ 把时间字符串转成时间戳
     """
-    return int(maya.parse(date, timezone=tz).datetime(to_timezone=tz).timestamp())
+    return int(maya.parse(date, timezone=fromtz).datetime(to_timezone=totz).timestamp())
 
 
-def date_to_timestamp_millisecond(date, str_format: str = '%Y-%m-%d %H:%M:%S'):
-    """
-    毫秒级时间戳(十三位)
-    """
-    timestamp = date_to_timestamp_second(date, str_format)
-
-    if timestamp:
-        timestamp = timestamp * 1000
-    return timestamp
+def date_to_timestamp_millisecond(date, fromtz=TIMEZONE_SHANGHAI, totz=TIMEZONE_SHANGHAI):
+    return maya.parse(date, timezone=fromtz).datetime(to_timezone=totz).timestamp()
 
 
 def get_date(timestamp=None, str_format: str = '%Y-%m-%d %H:%M:%S'):
@@ -293,7 +271,8 @@ def get_date_min_interval_day(date=None, time_delta: int = 0, str_format: str = 
     dt = datetime.today()
     if date:
         dt = datetime.strptime(date, str_format)
-    date = datetime.combine(dt - timedelta(time_delta), datetime.min.time()).strftime(str_format)
+    date = datetime.combine(dt - timedelta(time_delta),
+                            datetime.min.time()).strftime(str_format)
     return date
 
 
@@ -310,7 +289,8 @@ def get_date_max_interval_day(date=None, time_delta: int = 0, str_format: str = 
     if date:
         dt = datetime.strptime(date, str_format)
 
-    date = datetime.combine(dt - timedelta(time_delta), datetime.max.time()).strftime(str_format)
+    date = datetime.combine(dt - timedelta(time_delta),
+                            datetime.max.time()).strftime(str_format)
     return date
 
 
@@ -418,14 +398,17 @@ def get_from_and_to_date(date_year=None, date_month=None, date_day=None, date_ho
             and date_day is None and date_hour is None and date_year_week is None:
         month_range = calendar.monthrange(int(date_year), int(date_month))
         from_date = datetime(int(date_year), int(date_month), 1)
-        to_date = datetime(int(date_year), int(date_month), int(month_range[1]), 23, 59, 59)
+        to_date = datetime(int(date_year), int(date_month),
+                           int(month_range[1]), 23, 59, 59)
 
     elif date_year is not None and date_year_week is not None \
-            and date_day is None and date_hour is None and date_month is None :
-        from_date = datetime.strptime("{}-{}-{}".format(date_year, date_year_week, 1), "%Y-%U-%w")
-        to_date = datetime.strptime("{}-{}-{} 23:59:59".format(date_year, date_year_week + 1, 0), "%Y-%U-%w %H:%M:%S")
+            and date_day is None and date_hour is None and date_month is None:
+        from_date = datetime.strptime(
+            "{}-{}-{}".format(date_year, date_year_week, 1), "%Y-%U-%w")
+        to_date = datetime.strptime(
+            "{}-{}-{} 23:59:59".format(date_year, date_year_week + 1, 0), "%Y-%U-%w %H:%M:%S")
     elif date_year is not None and date_month is not None and date_day is not None \
-            and date_hour is None and date_year_week is None :
+            and date_hour is None and date_year_week is None:
         from_date = datetime(date_year, date_month, date_day)
         to_date = datetime(date_year, date_month, date_day, 23, 59, 59)
 

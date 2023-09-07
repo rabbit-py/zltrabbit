@@ -9,3 +9,4 @@ loguru
 pyjwt
 redis[hiredis]
 passlib
+maya
