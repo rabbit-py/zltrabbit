@@ -4,7 +4,6 @@ from typing import Callable
 
 
 class Pipeline:
-
     @property
     def data(self) -> list:
         return self._data
@@ -70,36 +69,15 @@ class Pipeline:
 
 class MatchHelper:
     match_map = {
-        'like': lambda x: {
-            '$regex': x
-        },
-        'not like': lambda x: {
-            '$not': {
-                '$regex': x
-            }
-        },
-        'in': lambda x: {
-            '$in': x
-        },
-        'between': lambda x: filter(lambda y: x[1] is not None, {
-            '$gte': x.pop(0, None),
-            '$lte': x.pop(0, None)
-        }.items()),
-        '>': lambda x: {
-            '$gt': x
-        },
-        '<': lambda x: {
-            '$lt': x
-        },
-        '>=': lambda x: {
-            '$gte': x
-        },
-        '<=': lambda x: {
-            '$lte': x
-        },
-        '!=': lambda x: {
-            '$not': x
-        }
+        'like': lambda x: {'$regex': x},
+        'not like': lambda x: {'$not': {'$regex': x}},
+        'in': lambda x: {'$in': x},
+        'between': lambda x: filter(lambda y: x[1] is not None, {'$gte': x.pop(0, None), '$lte': x.pop(0, None)}.items()),
+        '>': lambda x: {'$gt': x},
+        '<': lambda x: {'$lt': x},
+        '>=': lambda x: {'$gte': x},
+        '<=': lambda x: {'$lte': x},
+        '!=': lambda x: {'$not': x},
     }
 
     def convert(self, matcher: dict, convert_map: dict) -> None:

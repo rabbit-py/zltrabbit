@@ -30,7 +30,6 @@ class TimePeriod(object):
     # 自定义
     CUSTOM = 1001
 
-
     @property
     def period_type(self):
         return self._period_type
@@ -43,13 +42,12 @@ class TimePeriod(object):
     def end_time(self):
         return self._end_time
 
-
     def __init__(self, period_type):
         self._period_type = period_type
         self._start_time = None
         self._end_time = None
         self.set_period_type(period_type)
-    
+
     def set_period_type(self, period_type):
         datetime = DateTime(timezone=DateTime.TIMEZONE_BEIJING)
         if period_type == self.CURRENT_MINUTE:
@@ -106,11 +104,8 @@ class TimePeriod(object):
         elif period_type == self.LATEST_360_DAYS:
             self._end_time = datetime.seconds
             self._start_time = self._end_time - DateTime.ONE_DAY * 360
-            
-    
+
     def set_custom_period(self, start_time, end_time):
         self.period_type = self.CUSTOM
         self._start_time = start_time
         self._end_time = end_time
-
-        

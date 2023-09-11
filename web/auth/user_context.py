@@ -8,7 +8,6 @@ from base.di.service_location import config
 
 
 class UserContext:
-
     @property
     def id(self) -> str:
         id = context.get('request_user', {}).get('data', {}).get(config('jwt').get('id', 'id'))

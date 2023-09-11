@@ -10,7 +10,6 @@ from web.routes.request_context import request_context
 
 
 class RequestContextMiddleware(BaseHTTPMiddleware):
-
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint):
         context.clear()
         context.set('message_id', service.id_generator.generate_id())

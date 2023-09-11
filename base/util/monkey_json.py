@@ -4,6 +4,7 @@ import datetime
 from ipaddress import IPv4Address
 import json
 from typing import Any
+
 try:
     import ujson
 except ImportError:  # pragma: nocover
@@ -16,7 +17,6 @@ except ImportError:  # pragma: nocover
 
 
 class UJSONEncoder(json.JSONEncoder):
-    
     def default(self, o: Any) -> Any:
         try:
             if isinstance(o, datetime.datetime):
@@ -25,13 +25,15 @@ class UJSONEncoder(json.JSONEncoder):
                 return o.strftime('%Y-%m-%d')
             elif isinstance(o, IPv4Address):
                 return str(o)
-            return ujson.dumps(o,
-                               skipkeys=self.skipkeys,
-                               ensure_ascii=self.ensure_ascii,
-                               allow_nan=self.allow_nan,
-                               indent=self.indent,
-                               sort_keys=self.sort_keys,
-                               default=self.default)
+            return ujson.dumps(
+                o,
+                skipkeys=self.skipkeys,
+                ensure_ascii=self.ensure_ascii,
+                allow_nan=self.allow_nan,
+                indent=self.indent,
+                sort_keys=self.sort_keys,
+                default=self.default,
+            )
         except TypeError:
             return json.JSONEncoder.default(self, o)
 
@@ -44,7 +46,6 @@ class UJSONEncoder(json.JSONEncoder):
 
 
 class ORJSONEncoder(json.JSONEncoder):
-
     def default(self, o: Any) -> Any:
         try:
             if isinstance(o, datetime.datetime):
@@ -73,14 +74,9 @@ def monkey_patch_json(name: str = 'orjson') -> None:
     json.__name__ = name
     if name == 'orjson':
         assert orjson is not None, "orjson must be installed to use ORJSONCoder"
-        json._default_encoder = ORJSONEncoder(skipkeys=False,
-                                              ensure_ascii=False,
-                                              check_circular=True,
-                                              allow_nan=True,
-                                              indent=None,
-                                              sort_keys=False,
-                                              separators=None,
-                                              default=None)
+        json._default_encoder = ORJSONEncoder(
+            skipkeys=False, ensure_ascii=False, check_circular=True, allow_nan=True, indent=None, sort_keys=False, separators=None, default=None
+        )
     else:
         assert ujson is not None, "ujson must be installed to use UJSONCoder"
         json._default_encoder = UJSONEncoder(

@@ -5,7 +5,7 @@ import asyncio
 from functools import wraps
 from inspect import iscoroutinefunction
 import time
-from typing import (Any, Awaitable, Callable, Optional, Tuple)
+from typing import Any, Awaitable, Callable, Optional, Tuple
 from loguru import logger
 from base.coroutine.shared import shared, key_builder
 from base.di.service_location import service
@@ -15,7 +15,6 @@ from base.types import P, R
 
 
 class CacheInterface(metaclass=ABCMeta):
-
     @abstractmethod
     async def get_with_ttl(self, key: str) -> Tuple[int, Optional[bytes]]:
         pass
@@ -64,14 +63,10 @@ class MemoryCache(CacheInterface):
         return 0
 
 
-def cache(key: Any = None,
-          name: str = 'cache.default',
-          expire: float = None,
-          coder: CoderInterface = ORJSONCoder,
-          prefix: str = '') -> Callable[P, Awaitable[R]]:
-
+def cache(
+    key: Any = None, name: str = 'cache.default', expire: float = None, coder: CoderInterface = ORJSONCoder, prefix: str = ''
+) -> Callable[P, Awaitable[R]]:
     def wrapper(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
-
         @shared(coder=coder, prefix=prefix)
         @wraps(func)
         async def wrapper_function(*args: P.args, **kwargs: P.kwargs) -> R:

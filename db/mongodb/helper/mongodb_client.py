@@ -5,7 +5,6 @@ from base.di.service_location import BaseService
 
 
 class MongodbClient(BaseService):
-
     def __init__(self) -> None:
         self.client = None
 

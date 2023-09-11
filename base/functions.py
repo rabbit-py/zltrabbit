@@ -25,9 +25,7 @@ def env(key: str, default: Any = None) -> Any:
 
 
 def function_timer(name: str = None) -> Callable:
-
     def decorator(func):
-
         def wrapper_function(*args, **kwargs):
             start = DateTime()
             result = func(*args, **kwargs)

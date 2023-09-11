@@ -3,6 +3,7 @@ from typing import Any
 
 from base.di.service_location import service
 from .coder_interface import CoderInterface
+
 try:
     import ujson
 except ImportError:  # pragma: nocover
@@ -15,7 +16,6 @@ except ImportError:  # pragma: nocover
 
 
 class UJSONCoder(CoderInterface):
-
     @classmethod
     def encode(self, content: Any) -> bytes:
         assert ujson is not None, "ujson must be installed to use UJSONCoder"
@@ -27,7 +27,6 @@ class UJSONCoder(CoderInterface):
 
 
 class ORJSONCoder(CoderInterface):
-
     @classmethod
     def encode(self, content: Any) -> bytes:
         assert orjson is not None, "orjson must be installed to use ORJSONCoder"

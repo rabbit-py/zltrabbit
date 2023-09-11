@@ -14,7 +14,6 @@ from db.da_interface import DaInterface
 
 
 class CommonDAHelper(DaInterface):
-
     @property
     def session(self) -> AsyncIOMotorClientSession:
         return context.get('mongo_session')
@@ -36,7 +35,8 @@ class CommonDAHelper(DaInterface):
         if pb is not None:
             pb_tmp = dict(
                 protobuf_transformer.protobuf_to_dict(protobuf_transformer.dict_to_protobuf(data, pb), preserving_proto_field_name=keep_key),
-                **pb_tmp)
+                **pb_tmp
+            )
             for key in [x for x in data.keys()]:
                 if key not in pb_tmp:
                     data.pop(key)
@@ -55,14 +55,14 @@ class CommonDAHelper(DaInterface):
         if matcher is None:
             matcher = {"id": pb_tmp.get('id')}
         projection.update({"_id": False})
-        return await self.collection.find_one_and_update(matcher, {
-            "$set": data,
-            '$setOnInsert': dict(filter(lambda x: x[0] not in data, pb_tmp.items()))
-        },
-                                                         return_document=ReturnDocument.AFTER,
-                                                         upsert=True,
-                                                         projection=projection,
-                                                         session=self.session)
+        return await self.collection.find_one_and_update(
+            matcher,
+            {"$set": data, '$setOnInsert': dict(filter(lambda x: x[0] not in data, pb_tmp.items()))},
+            return_document=ReturnDocument.AFTER,
+            upsert=True,
+            projection=projection,
+            session=self.session,
+        )
 
     async def batch_save(self, datas: list, matcher: list = None, keep_key: bool = False, pb: object = None) -> int:
         bulk_write_data = []
@@ -75,10 +75,8 @@ class CommonDAHelper(DaInterface):
                 for key in matcher:
                     condition.update({key: data.get(key)})
             bulk_write_data.append(
-                UpdateOne(condition, {
-                    "$set": data,
-                    '$setOnInsert': dict(filter(lambda x: x[0] not in data, pb_tmp.items()))
-                }, upsert=True))
+                UpdateOne(condition, {"$set": data, '$setOnInsert': dict(filter(lambda x: x[0] not in data, pb_tmp.items()))}, upsert=True)
+            )
 
         result = await self.collection.bulk_write(bulk_write_data, session=self.session)
         return result.inserted_count + result.modified_count
@@ -94,8 +92,12 @@ class CommonDAHelper(DaInterface):
     async def list(self, matcher: dict = {}, projection: dict = {}, page: int = 1, page_size: int = 0, sort=[], **kwargs) -> List:
         page = page if page > 0 else 1
         projection.update({"_id": False})
-        return await self.collection.find(matcher, projection=projection, sort=sort,
-                                          **kwargs).skip(page_size * (page - 1)).limit(page_size).to_list(length=None)
+        return (
+            await self.collection.find(matcher, projection=projection, sort=sort, **kwargs)
+            .skip(page_size * (page - 1))
+            .limit(page_size)
+            .to_list(length=None)
+        )
 
     async def count(self, matcher: dict = {}) -> int:
         return await self.collection.count_documents(matcher)
@@ -140,30 +142,22 @@ class CommonDAHelper(DaInterface):
     async def index(self, param: List = [], page: int = 1, page_size: int = 20, sort={}, cached: dict = None) -> dict:
         if sort:
             param.append({'$sort': sort})
-        param.append({
-            '$facet': {
-                'total': [{
-                    '$count': "count"
-                }],
-                'records': [{
-                    '$project': {
-                        '_id': False
-                    }
-                }, {
-                    '$skip': page_size * (page - 1)
-                }, {
-                    '$limit': page_size
-                }]
+        param.append(
+            {
+                '$facet': {
+                    'total': [{'$count': "count"}],
+                    'records': [{'$project': {'_id': False}}, {'$skip': page_size * (page - 1)}, {'$limit': page_size}],
+                }
             }
-        })
-        param.append({'$project': {
-            'records': "$records",
-            'total': {
-                '$ifNull': [{
-                    '$arrayElemAt': ["$total.count", 0]
-                }, 0]
-            },
-        }})
+        )
+        param.append(
+            {
+                '$project': {
+                    'records': "$records",
+                    'total': {'$ifNull': [{'$arrayElemAt': ["$total.count", 0]}, 0]},
+                }
+            }
+        )
         return ((await self.query(param, cached=cached)) or [{'records': [], 'total': 0}]).pop(0)
 
     def default_query(self, matcher: dict) -> dict:

@@ -8,7 +8,6 @@ from datetime import datetime
 
 
 class DateTime(object):
-
     # 时间戳常量(秒级)
     ONE_SECOND = 1
     ONE_MINUTE = 60 * ONE_SECOND
@@ -82,22 +81,26 @@ class DateTime(object):
     def weekday(self):
         return self.datetime.weekday()
 
-    def __init__(self,
-                 seconds: int = None,
-                 milliseconds: int = None,
-                 nanoseconds: int = None,
-                 date_string: str = None,
-                 str_format: str = '%Y-%m-%d %H:%M:%S',
-                 timezone: str = TIMEZONE_BEIJING):
+    def __init__(
+        self,
+        seconds: int = None,
+        milliseconds: int = None,
+        nanoseconds: int = None,
+        date_string: str = None,
+        str_format: str = '%Y-%m-%d %H:%M:%S',
+        timezone: str = TIMEZONE_BEIJING,
+    ):
         self.timezone = pytz.timezone(timezone)
         self.reset_time(seconds=seconds, milliseconds=milliseconds, nanoseconds=nanoseconds, date_string=date_string, str_format=str_format)
 
-    def reset_time(self,
-                   seconds: int = None,
-                   milliseconds: int = None,
-                   nanoseconds: int = None,
-                   date_string: str = None,
-                   str_format: str = '%Y-%m-%d %H:%M:%S'):
+    def reset_time(
+        self,
+        seconds: int = None,
+        milliseconds: int = None,
+        nanoseconds: int = None,
+        date_string: str = None,
+        str_format: str = '%Y-%m-%d %H:%M:%S',
+    ):
         # 初始化时间
         if seconds is not None:
             self.timestamp = seconds * self.NANOSECONDS_IN_ONE_SECOND

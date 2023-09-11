@@ -11,7 +11,6 @@ from base.functions import to_lower_camel
 
 
 class JSONResponse(_JSONResponse):
-
     def __init__(
         self,
         content=None,
@@ -32,7 +31,8 @@ async def request_body(request: Request, exclude: list = [], with_matcher: bool 
     try:
         body = {}
         if 'multipart/form-data' in request.headers.get('Content-Type', '') or 'application/x-www-form-urlencoded' in request.headers.get(
-                'Content-Type', ''):
+            'Content-Type', ''
+        ):
             body = dict(await request.form())
         elif await request.body():
             body = await request.json()
@@ -49,15 +49,16 @@ async def request_body(request: Request, exclude: list = [], with_matcher: bool 
         raise e
 
 
-def add_route(router: APIRouter,
-              manager: DaInterface,
-              pb: object,
-              keep_key: bool,
-              before_events: dict = {},
-              after_events: dict = {},
-              cached: dict = {},
-              exclude: list = []) -> None:
-
+def add_route(
+    router: APIRouter,
+    manager: DaInterface,
+    pb: object,
+    keep_key: bool,
+    before_events: dict = {},
+    after_events: dict = {},
+    cached: dict = {},
+    exclude: list = [],
+) -> None:
     if 'index' not in exclude:
 
         @router.post("")
@@ -73,14 +74,18 @@ def add_route(router: APIRouter,
                 matcher = to_lower_camel(matcher)
             sort = matcher.pop('sort{}', None)
             if 'index' in before_events:
-                param = (await before_events['index']
-                         (matcher)) if inspect.iscoroutinefunction(before_events['index']) else before_events['index'](matcher)
+                param = (
+                    (await before_events['index'](matcher))
+                    if inspect.iscoroutinefunction(before_events['index'])
+                    else before_events['index'](matcher)
+                )
             else:
                 param = manager.default_query(matcher)
             result = await manager.index(param, page=page, page_size=pageSize, sort=sort, cached=cached.get('index'))
             if 'index' in after_events:
-                (await after_events['index'](param, result['records'])) if inspect.iscoroutinefunction(
-                    after_events['index']) else after_events['index'](param, result['records'])
+                (await after_events['index'](param, result['records'])) if inspect.iscoroutinefunction(after_events['index']) else after_events[
+                    'index'
+                ](param, result['records'])
             return result
 
     if 'list' not in exclude:
@@ -98,14 +103,18 @@ def add_route(router: APIRouter,
                 matcher = to_lower_camel(matcher)
             sort = matcher.pop('sort{}', None)
             if 'list' in before_events:
-                param = (await before_events['list']
-                         (matcher)) if inspect.iscoroutinefunction(before_events['list']) else before_events['list'](matcher)
+                param = (
+                    (await before_events['list'](matcher))
+                    if inspect.iscoroutinefunction(before_events['list'])
+                    else before_events['list'](matcher)
+                )
             else:
                 param = manager.default_query(matcher)
             result = (await manager.query(param, sort=sort, page=page, page_size=pageSize, cached=cached.get('list'))) or []
             if 'list' in after_events:
-                (await after_events['list']
-                 (param, result)) if inspect.iscoroutinefunction(after_events['list']) else after_events['list'](param, result)
+                (await after_events['list'](param, result)) if inspect.iscoroutinefunction(after_events['list']) else after_events['list'](
+                    param, result
+                )
             return result
 
     if 'get' not in exclude:
@@ -123,14 +132,18 @@ def add_route(router: APIRouter,
                 matcher = to_lower_camel(matcher)
             sort = matcher.pop('sort{}', None)
             if 'get' in before_events:
-                param = (await before_events['get']
-                         (matcher)) if inspect.iscoroutinefunction(before_events['get']) else before_events['get'](matcher)
+                param = (
+                    (await before_events['get'](matcher))
+                    if inspect.iscoroutinefunction(before_events['get'])
+                    else before_events['get'](matcher)
+                )
             else:
                 param = manager.default_query(matcher if not id else dict(matcher, **{'id': id}))
             result = ((await manager.query(param, sort=sort, cached=cached.get('get'))) or [{}]).pop(0)
             if 'get' in after_events:
-                (await after_events['get']
-                 (param, result)) if inspect.iscoroutinefunction(after_events['get']) else after_events['get'](param, result)
+                (await after_events['get'](param, result)) if inspect.iscoroutinefunction(after_events['get']) else after_events['get'](
+                    param, result
+                )
             return result
 
     if 'save' not in exclude:
@@ -143,16 +156,18 @@ def add_route(router: APIRouter,
             if not keep_key:
                 param = to_lower_camel(param)
             if 'save' in before_events:
-                param = (await before_events['save']
-                         (param)) if inspect.iscoroutinefunction(before_events['save']) else before_events['save'](param)
+                param = (
+                    (await before_events['save'](param)) if inspect.iscoroutinefunction(before_events['save']) else before_events['save'](param)
+                )
             else:
                 param = {'data': param}
             if not param or not param.get('data'):
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='参数不能为空')
             result = await manager.save(**param, keep_key=keep_key, pb=pb)
             if 'save' in after_events:
-                (await after_events['save']
-                 (param, result)) if inspect.iscoroutinefunction(after_events['save']) else after_events['save'](param, result)
+                (await after_events['save'](param, result)) if inspect.iscoroutinefunction(after_events['save']) else after_events['save'](
+                    param, result
+                )
             return result
 
         @router.post("/batch_update")
@@ -164,16 +179,20 @@ def add_route(router: APIRouter,
                 for item in param:
                     item = to_lower_camel(item)
             if 'batch' in before_events:
-                param = (await before_events['batch']
-                         (param)) if inspect.iscoroutinefunction(before_events['batch']) else before_events['batch'](param)
+                param = (
+                    (await before_events['batch'](param))
+                    if inspect.iscoroutinefunction(before_events['batch'])
+                    else before_events['batch'](param)
+                )
             else:
                 param = {'datas': param}
             if not param or not param.get('datas'):
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='参数不能为空')
             result = await manager.batch_save(**param, keep_key=keep_key, pb=pb)
             if 'batch' in after_events:
-                (await after_events['batch']
-                 (item, result)) if inspect.iscoroutinefunction(after_events['batch']) else after_events['batch'](item, result)
+                (await after_events['batch'](item, result)) if inspect.iscoroutinefunction(after_events['batch']) else after_events['batch'](
+                    item, result
+                )
             return True
 
     if 'count' not in exclude:
@@ -187,14 +206,18 @@ def add_route(router: APIRouter,
             if not keep_key:
                 matcher = to_lower_camel(matcher)
             if 'count' in before_events:
-                param = (await before_events['count']
-                         (matcher)) if inspect.iscoroutinefunction(before_events['count']) else before_events['count'](matcher)
+                param = (
+                    (await before_events['count'](matcher))
+                    if inspect.iscoroutinefunction(before_events['count'])
+                    else before_events['count'](matcher)
+                )
             else:
                 param = manager.default_query(matcher)
             result = await manager.count_query(param, cached=cached.get('distinct'))
             if 'count' in after_events:
-                (await after_events['count']
-                 (param, result)) if inspect.iscoroutinefunction(after_events['count']) else after_events['count'](param, result)
+                (await after_events['count'](param, result)) if inspect.iscoroutinefunction(after_events['count']) else after_events['count'](
+                    param, result
+                )
             return result
 
     if 'delete' not in exclude:
@@ -202,7 +225,17 @@ def add_route(router: APIRouter,
         @router.delete("/{id}")
         @router.post("/delete/{id}")
         async def delete(id: str) -> int:
-            return (await manager.delete(id))
+            ret = True
+            if 'delete' in before_events:
+                ret = (
+                    (await before_events['delete'](id)) if inspect.iscoroutinefunction(before_events['delete']) else before_events['delete'](id)
+                )
+            result = (await manager.delete(id)) if ret else 0
+            if 'delete' in after_events:
+                (await after_events['delete'](id, result)) if inspect.iscoroutinefunction(after_events['delete']) else after_events['delete'](
+                    id, result
+                )
+            return result
 
     if 'distinct' not in exclude:
 
@@ -213,32 +246,37 @@ def add_route(router: APIRouter,
             if not keep_key:
                 matcher = to_lower_camel(matcher)
             if 'distinct' in before_events:
-                param = (await before_events['distinct']
-                         (key, matcher)) if inspect.iscoroutinefunction(before_events['distinct']) else before_events['distinct'](key, matcher)
+                param = (
+                    (await before_events['distinct'](key, matcher))
+                    if inspect.iscoroutinefunction(before_events['distinct'])
+                    else before_events['distinct'](key, matcher)
+                )
             else:
                 param = matcher
             result = await manager.distinct(key, param, cached=cached.get('distinct'))
             if 'distinct' in after_events:
-                (await after_events['distinct'](key, param, result)) if inspect.iscoroutinefunction(
-                    after_events['distinct']) else after_events['distinct'](key, param, result)
+                (await after_events['distinct'](key, param, result)) if inspect.iscoroutinefunction(after_events['distinct']) else after_events[
+                    'distinct'
+                ](key, param, result)
             return result
 
 
 class BaseRouter:
-
     @property
     def router(self):
         return self._router
 
-    def __init__(self,
-                 router: APIRouter,
-                 manager: DaInterface,
-                 pb: object = None,
-                 keep_key: bool = False,
-                 before_events: dict = {},
-                 after_events: dict = {},
-                 cached: dict = {},
-                 exclude: list = ['delete']) -> None:
+    def __init__(
+        self,
+        router: APIRouter,
+        manager: DaInterface,
+        pb: object = None,
+        keep_key: bool = False,
+        before_events: dict = {},
+        after_events: dict = {},
+        cached: dict = {},
+        exclude: list = ['delete'],
+    ) -> None:
         self._router = router
         self._router.default_response_class = JSONResponse
         add_route(router, manager, pb, keep_key, before_events, after_events, cached, exclude)

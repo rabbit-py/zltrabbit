@@ -13,9 +13,7 @@ class NotRetryException(Exception):
 
 
 def retry(times: int = 3, sleep: float = 0.2, raise_except: bool = True) -> Callable[P, Awaitable[R]]:
-
     def wrapper(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
-
         @wraps(func)
         async def wrapper_function(*args: P.args, **kwargs: P.kwargs) -> R:
             nonlocal times
@@ -36,8 +34,7 @@ def retry(times: int = 3, sleep: float = 0.2, raise_except: bool = True) -> Call
                         else:
                             logger.error(e)
                             return None
-                logger.warning(
-                    f'{func.__name__} retry the {str(times)} times with sleep {sleep}s')
+                logger.warning(f'{func.__name__} retry the {str(times)} times with sleep {sleep}s')
 
                 if sleep > 0:
                     asyncio.sleep(sleep)
@@ -48,7 +45,6 @@ def retry(times: int = 3, sleep: float = 0.2, raise_except: bool = True) -> Call
 
 
 def async_nowait(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
-
     @wraps(func)
     async def wrapper_function(*args: P.args, **kwargs: P.kwargs) -> R:
         logger.info(f'running task {func.__name__}')

@@ -2,7 +2,7 @@
 from functools import wraps
 from redis.asyncio.client import AbstractRedis
 from redis.asyncio.cluster import AbstractRedisCluster
-from typing import (Any, Awaitable, Callable, Union, Optional, Tuple)
+from typing import Any, Awaitable, Callable, Union, Optional, Tuple
 from loguru import logger
 from redis import asyncio as aioredis
 from redis.asyncio.lock import Lock
@@ -12,7 +12,6 @@ from ..cache_helper import CacheInterface
 
 
 class RedisManager(BaseService):
-
     @property
     def client(self) -> Union[AbstractRedis, AbstractRedisCluster]:
         return self.redis
@@ -22,7 +21,6 @@ class RedisManager(BaseService):
 
 
 class RedisCache(CacheInterface):
-
     def __init__(self, redis: Union[AbstractRedis, AbstractRedisCluster], prefix: str = 'cache') -> None:
         self.redis = redis
         self.prefix = prefix
@@ -44,9 +42,7 @@ class RedisCache(CacheInterface):
 
 
 def redis_lock(key: Any, name: str = 'redis.default', timeout: float = 10) -> Callable[P, Awaitable[R]]:
-
     def wrapper(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
-
         @wraps(func)
         async def wrapper_function(*args: P.args, **kwargs: P.kwargs) -> R:
             async with Lock(service.get(name).client, key, timeout=timeout):

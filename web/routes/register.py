@@ -13,7 +13,6 @@ from web.routes.base_router import auto_import
 
 
 def register_base(app: FastAPI, before_import: list = [], after_import: list = []) -> None:
-
     app.add_middleware(
         CORSMiddleware,
         allow_origins=env("ALLOW_ORIGIN", "*").split(","),

@@ -5,9 +5,7 @@ from typing import Any
 
 
 class Context:
-
     def __init__(self, name='context') -> None:
-
         self._common_ctx_var: ContextVar[dict] = ContextVar(name, default={})
 
     def get(self, key: str, default: Any = None) -> Any:

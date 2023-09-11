@@ -7,8 +7,7 @@ import jwt
 from .user_context import user_context
 
 
-class JwtAuth():
-
+class JwtAuth:
     def __init__(self, issuer: str, secret: str, expired: int = 86400) -> None:
         self._issuer = issuer
         self._secret = secret
@@ -21,10 +20,12 @@ class JwtAuth():
         elif isinstance(expired, int) and expired > 0:
             config.update({'exp': datetime.datetime.now() + datetime.timedelta(seconds=expired), 'iss': self._issuer})
         else:
-            config.update({
-                'exp': datetime.datetime.now() + datetime.timedelta(seconds=self._expired),
-                'iss': self._issuer,
-            })
+            config.update(
+                {
+                    'exp': datetime.datetime.now() + datetime.timedelta(seconds=self._expired),
+                    'iss': self._issuer,
+                }
+            )
         config.update({'data': user_info})
         return jwt.encode(config, self._secret, algorithm='HS256')
 

@@ -5,7 +5,6 @@ from base.coroutine.context import context
 
 
 class BaseContext:
-
     def __init__(self, key: str) -> None:
         self.key = key
 

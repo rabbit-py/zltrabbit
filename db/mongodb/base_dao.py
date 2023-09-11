@@ -8,7 +8,6 @@ from base.coroutine.context import context
 
 
 class BaseDAO:
-
     def __init__(self, db: str, conn: str) -> None:
         self._db = db
         self._conn = conn

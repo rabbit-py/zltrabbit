@@ -5,7 +5,6 @@ from typing import Any
 
 
 class Channel:
-
     @property
     def capacity(self) -> int:
         return self._queue.maxsize

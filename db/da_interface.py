@@ -5,7 +5,6 @@ from typing import List
 
 
 class DaInterface(metaclass=ABCMeta):
-
     @abstractmethod
     async def save(self, data: dict, matcher: dict = None, projection={}, keep_key: bool = False, pb: object = None) -> dict:
         pass

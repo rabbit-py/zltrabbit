@@ -6,7 +6,6 @@ from typing import Any
 
 
 class Pool:
-
     def __init__(self, module: str, config: dict, size: int = 10) -> None:
         self._total = 0
         self._module = module
@@ -29,7 +28,6 @@ class Pool:
 
 
 class BasePoolObject(metaclass=ABCMeta):
-
     @property
     def pool(self) -> Pool:
         return self._pool

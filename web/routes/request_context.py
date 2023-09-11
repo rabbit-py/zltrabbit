@@ -8,7 +8,6 @@ CONTEXT_KEY = 'request'
 
 
 class RequestContext(BaseContext):
-
     def get(self) -> Request:
         return context.get(CONTEXT_KEY)
 

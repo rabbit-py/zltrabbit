@@ -4,7 +4,6 @@ from abc import abstractmethod, ABCMeta
 
 
 class StorageInterface(metaclass=ABCMeta):
-
     @abstractmethod
     def save_token(self, token: dict, key: str = 'id', expired: int = 7200) -> None:
         ...

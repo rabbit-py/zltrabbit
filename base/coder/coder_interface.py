@@ -4,7 +4,6 @@ from typing import Any
 
 
 class CoderInterface(metaclass=ABCMeta):
-
     @abstractmethod
     def encode(self, content: Any) -> bytes:
         pass

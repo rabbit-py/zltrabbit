@@ -26,12 +26,14 @@ def loguru_setup() -> None:
     config = service.config('logger', {})
     custom_format = config.get(
         'format',
-        "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | {extra[request_id]} | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | <level>{message}</level>"
+        "<green>{time:YYYY-MM-DD HH:mm:ss.SSS}</green> | <level>{level: <8}</level> | {extra[request_id]} | <cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | <level>{message}</level>",
     )
     sys.tracebacklimit = config.get('tracebacklimit', None if env('DEBUG') else 2)
     logger.remove()
-    logger.add(sys.stderr,
-               format=custom_format,
-               level=config.get('level', 0),
-               enqueue=config.get('enqueue', True),
-               filter=service.create(config.get('filter'), {}, False).filter if config.get('filter') else filter)
+    logger.add(
+        sys.stderr,
+        format=custom_format,
+        level=config.get('level', 0),
+        enqueue=config.get('enqueue', True),
+        filter=service.create(config.get('filter'), {}, False).filter if config.get('filter') else filter,
+    )

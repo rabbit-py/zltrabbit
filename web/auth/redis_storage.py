@@ -6,7 +6,6 @@ from base.di.service_location import service
 
 
 class RedisStorage(StorageInterface):
-
     def __init__(self, name='redis.default') -> None:
         self._redis = service.get(name)
 

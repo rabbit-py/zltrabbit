@@ -3,7 +3,7 @@
 from functools import wraps
 from hashlib import md5
 import inspect
-from typing import (Any, Awaitable, Callable)
+from typing import Any, Awaitable, Callable
 from base.coder.coder_interface import CoderInterface
 from base.coder.json_coder import ORJSONCoder
 from base.di.service_location import BaseService
@@ -30,12 +30,9 @@ class Share(BaseService):
         return obj
 
 
-def key_builder(func: Callable[P, Awaitable[R]],
-                args: list,
-                kwargs: dict,
-                key: Any = None,
-                coder: CoderInterface = ORJSONCoder,
-                prefix: str = '') -> str:
+def key_builder(
+    func: Callable[P, Awaitable[R]], args: list, kwargs: dict, key: Any = None, coder: CoderInterface = ORJSONCoder, prefix: str = ''
+) -> str:
     ordered_kwargs = sorted(kwargs.items())
     sig = inspect.signature(func)
     tmp_param = (func.__module__ or "") + '.' + func.__name__ + str(args[1:] if 'self' in sig.parameters else args) + str(ordered_kwargs)
@@ -46,9 +43,7 @@ def key_builder(func: Callable[P, Awaitable[R]],
 
 
 def shared(key: Any = None, timeout: float = 3, coder: CoderInterface = ORJSONCoder, prefix: str = '') -> Callable[P, Awaitable[R]]:
-
     def wrapper(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
-
         @wraps(func)
         async def wrapper_function(*args: P.args, **kwargs: P.kwargs) -> R:
             new_key = key_builder(func, args, kwargs, key, coder, prefix)
