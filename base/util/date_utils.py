@@ -26,7 +26,9 @@ def get_datetime_in_timezone(epoch_second: Union[int, float], timezone_code: str
     return datetime.fromtimestamp(epoch_second, tz=get_timezone(timezone_code))
 
 
-def timestamp_to_string(timestamp: Union[int, float], fmt: str = "%Y-%m-%d %H:%M:%S", fromtz: str = None, totz: str = None) -> str:
+def timestamp_to_string(
+    timestamp: Union[int, float], fmt: str = "%Y-%m-%d %H:%M:%S", fromtz: str = None, totz: str = None
+) -> str:
     if fromtz is None:
         fromtz = pytz.timezone(TIMEZONE_UTC)
     if totz is None:
@@ -360,7 +362,9 @@ def get_week_delta(from_timestamp=None, to_timestamp=None, from_date=None, to_da
     return week_delta
 
 
-def get_month_delta(from_timestamp=None, to_timestamp=None, from_date=None, to_date=None, str_format: str = '%Y-%m-%d %H:%M:%S'):
+def get_month_delta(
+    from_timestamp=None, to_timestamp=None, from_date=None, to_date=None, str_format: str = '%Y-%m-%d %H:%M:%S'
+):
     """
     计算指定时间区间(支持时间戳或者日期)的间隔月数
     :param from_timestamp: 开始时间戳
@@ -394,11 +398,23 @@ def get_from_and_to_date(date_year=None, date_month=None, date_day=None, date_ho
     elif date_year is not None and date_year_week is not None and date_day is None and date_hour is None and date_month is None:
         from_date = datetime.strptime("{}-{}-{}".format(date_year, date_year_week, 1), "%Y-%U-%w")
         to_date = datetime.strptime("{}-{}-{} 23:59:59".format(date_year, date_year_week + 1, 0), "%Y-%U-%w %H:%M:%S")
-    elif date_year is not None and date_month is not None and date_day is not None and date_hour is None and date_year_week is None:
+    elif (
+        date_year is not None
+        and date_month is not None
+        and date_day is not None
+        and date_hour is None
+        and date_year_week is None
+    ):
         from_date = datetime(date_year, date_month, date_day)
         to_date = datetime(date_year, date_month, date_day, 23, 59, 59)
 
-    elif date_year is not None and date_month is not None and date_day is not None and date_hour is not None and date_year_week is None:
+    elif (
+        date_year is not None
+        and date_month is not None
+        and date_day is not None
+        and date_hour is not None
+        and date_year_week is None
+    ):
         from_date = datetime(date_year, date_month, date_day, date_hour)
         to_date = datetime(date_year, date_month, date_day, date_hour, 59, 59)
 

@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from typing import Any, List, Tuple
+from typing import Any, List, Union
 
 from pymongo import ReturnDocument, UpdateOne
-from base.data_transform import protobuf_transformer
-from base.util import date_utils
 from base.di.service_location import service
 from base.coroutine.context import context
 from motor.motor_asyncio import AsyncIOMotorClientSession, AsyncIOMotorCollection
+from db.base_model import BaseModel
 from db.cache_helper import cache
 
 from db.da_interface import DaInterface
@@ -28,54 +27,45 @@ class CommonDAHelper(DaInterface):
         self.coll = coll
         self.id_generator = service.id_generator
 
-    def prefix_data(self, data: dict, keep_key: bool = False, pb: object = None) -> Tuple:
-        pb_tmp = {'id': data.pop('id', None)}
-        create_time_key = 'create_time' if keep_key and 'create_time' in data else 'createTime'
-        data.pop(create_time_key, None)
-        if pb is not None:
-            pb_tmp = dict(
-                protobuf_transformer.protobuf_to_dict(protobuf_transformer.dict_to_protobuf(data, pb), preserving_proto_field_name=keep_key),
-                **pb_tmp
-            )
-            for key in [x for x in data.keys()]:
-                if key not in pb_tmp:
-                    data.pop(key)
-        if not pb_tmp.get('id'):
-            pb_tmp.update({'id': self.id_generator.generate_id()})
-        time = date_utils.timestamp_second()
-        pb_tmp.update({create_time_key: time})
-        data.update({'update_time' if keep_key and 'update_time' in data else 'updateTime': time})
-        return data, pb_tmp
-
     async def updateAll(self, data: dict, matcher: dict) -> int:
         return (await self.collection.update_many(matcher, {'$set': data})).modified_count
 
-    async def save(self, data: dict, matcher: dict = None, projection={}, keep_key: bool = False, pb: object = None) -> dict:
-        data, pb_tmp = self.prefix_data(data, keep_key, pb)
+    async def save(self, model: Union[BaseModel, dict], matcher: dict = None, projection={}) -> dict:
+        if isinstance(model, dict):
+            model = BaseModel().load(model)
+        tmp = model.to_dict()
+        data = model.data
         if matcher is None:
-            matcher = {"id": pb_tmp.get('id')}
+            matcher = {model.key: tmp.get(model.key)}
         projection.update({"_id": False})
         return await self.collection.find_one_and_update(
             matcher,
-            {"$set": data, '$setOnInsert': dict(filter(lambda x: x[0] not in data, pb_tmp.items()))},
+            {"$set": data, '$setOnInsert': dict(filter(lambda x: x[0] not in data, tmp.items()))},
             return_document=ReturnDocument.AFTER,
             upsert=True,
             projection=projection,
             session=self.session,
         )
 
-    async def batch_save(self, datas: list, matcher: list = None, keep_key: bool = False, pb: object = None) -> int:
+    async def batch_save(self, models: list[Union[BaseModel, dict]], matcher: list = None) -> int:
         bulk_write_data = []
-        for data in datas:
-            data, pb_tmp = self.prefix_data(data, keep_key, pb)
+        for model in models:
+            if isinstance(model, dict):
+                model = BaseModel().load(model)
+            tmp = model.to_dict()
+            data = model.data
             if matcher is None:
-                condition = {"id": pb_tmp.get('id')}
+                condition = {model.key: tmp.get(model.key)}
             else:
                 condition = {}
                 for key in matcher:
                     condition.update({key: data.get(key)})
             bulk_write_data.append(
-                UpdateOne(condition, {"$set": data, '$setOnInsert': dict(filter(lambda x: x[0] not in data, pb_tmp.items()))}, upsert=True)
+                UpdateOne(
+                    condition,
+                    {"$set": data, '$setOnInsert': dict(filter(lambda x: x[0] not in data, tmp.items()))},
+                    upsert=True,
+                )
             )
 
         result = await self.collection.bulk_write(bulk_write_data, session=self.session)
@@ -89,7 +79,9 @@ class CommonDAHelper(DaInterface):
         projection.update({"_id": False})
         return (await self.collection.find_one(matcher, projection=projection, sort=sort, **kwargs)) or {}
 
-    async def list(self, matcher: dict = {}, projection: dict = {}, page: int = 1, page_size: int = 0, sort=[], **kwargs) -> List:
+    async def list(
+        self, matcher: dict = {}, projection: dict = {}, page: int = 1, page_size: int = 0, sort=[], **kwargs
+    ) -> List:
         page = page if page > 0 else 1
         projection.update({"_id": False})
         return (

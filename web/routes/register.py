@@ -28,7 +28,9 @@ def register_base(app: FastAPI, before_import: list = [], after_import: list = [
 
     @app.exception_handler(RequestValidationError)
     async def request_exception_handler(request, exc):
-        return JSONResponse(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, code=status.HTTP_422_UNPROCESSABLE_ENTITY, msg=str(exc))
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, code=status.HTTP_422_UNPROCESSABLE_ENTITY, msg=str(exc)
+        )
 
     @app.on_event("startup")
     async def startup_event():

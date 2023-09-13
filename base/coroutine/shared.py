@@ -31,18 +31,31 @@ class Share(BaseService):
 
 
 def key_builder(
-    func: Callable[P, Awaitable[R]], args: list, kwargs: dict, key: Any = None, coder: CoderInterface = ORJSONCoder, prefix: str = ''
+    func: Callable[P, Awaitable[R]],
+    args: list,
+    kwargs: dict,
+    key: Any = None,
+    coder: CoderInterface = ORJSONCoder,
+    prefix: str = '',
 ) -> str:
     ordered_kwargs = sorted(kwargs.items())
     sig = inspect.signature(func)
-    tmp_param = (func.__module__ or "") + '.' + func.__name__ + str(args[1:] if 'self' in sig.parameters else args) + str(ordered_kwargs)
+    tmp_param = (
+        (func.__module__ or "")
+        + '.'
+        + func.__name__
+        + str(args[1:] if 'self' in sig.parameters else args)
+        + str(ordered_kwargs)
+    )
     new_key = coder.encode(key or coder.encode(tmp_param).decode()).decode()
     if '.' in new_key or len(new_key) > 32:
         new_key = md5(new_key.encode("utf-8")).hexdigest()
     return f'{prefix}:{new_key}' if prefix else new_key
 
 
-def shared(key: Any = None, timeout: float = 3, coder: CoderInterface = ORJSONCoder, prefix: str = '') -> Callable[P, Awaitable[R]]:
+def shared(
+    key: Any = None, timeout: float = 3, coder: CoderInterface = ORJSONCoder, prefix: str = ''
+) -> Callable[P, Awaitable[R]]:
     def wrapper(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
         @wraps(func)
         async def wrapper_function(*args: P.args, **kwargs: P.kwargs) -> R:

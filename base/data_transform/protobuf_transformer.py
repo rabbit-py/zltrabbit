@@ -22,7 +22,9 @@ def batch_dict_to_protobuf(protobuf_json_list: list, protobuf_cls: object) -> li
 def protobuf_to_dict(protobuf: object, preserving_proto_field_name: bool = False) -> dict:
     if protobuf is None:
         return None
-    dict = json_format.MessageToDict(protobuf, including_default_value_fields=True, preserving_proto_field_name=preserving_proto_field_name)
+    dict = json_format.MessageToDict(
+        protobuf, including_default_value_fields=True, preserving_proto_field_name=preserving_proto_field_name
+    )
     return dict
 
 

@@ -1,16 +1,18 @@
 # -*- coding: utf-8 -*-
 
 from abc import ABCMeta, abstractmethod
-from typing import List
+from typing import List, Union
+
+from db.base_model import BaseModel
 
 
 class DaInterface(metaclass=ABCMeta):
     @abstractmethod
-    async def save(self, data: dict, matcher: dict = None, projection={}, keep_key: bool = False, pb: object = None) -> dict:
+    async def save(self, model: Union[BaseModel, dict], matcher: dict = None, projection={}) -> dict:
         pass
 
     @abstractmethod
-    async def batch_save(self, datas: list, matcher: list = None, keep_key: bool = False, pb: object = None) -> int:
+    async def batch_save(self, models: list[Union[BaseModel, dict]], matcher: list = None) -> int:
         pass
 
     @abstractmethod
@@ -22,7 +24,9 @@ class DaInterface(metaclass=ABCMeta):
         pass
 
     @abstractmethod
-    async def list(self, matcher: dict = {}, projection: dict = {}, page: int = 1, page_size: int = 0, sort=[], **kwargs) -> List:
+    async def list(
+        self, matcher: dict = {}, projection: dict = {}, page: int = 1, page_size: int = 0, sort=[], **kwargs
+    ) -> List:
         pass
 
     @abstractmethod

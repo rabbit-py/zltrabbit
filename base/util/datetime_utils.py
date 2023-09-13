@@ -91,7 +91,9 @@ class DateTime(object):
         timezone: str = TIMEZONE_BEIJING,
     ):
         self.timezone = pytz.timezone(timezone)
-        self.reset_time(seconds=seconds, milliseconds=milliseconds, nanoseconds=nanoseconds, date_string=date_string, str_format=str_format)
+        self.reset_time(
+            seconds=seconds, milliseconds=milliseconds, nanoseconds=nanoseconds, date_string=date_string, str_format=str_format
+        )
 
     def reset_time(
         self,

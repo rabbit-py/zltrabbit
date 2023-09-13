@@ -75,7 +75,14 @@ def monkey_patch_json(name: str = 'orjson') -> None:
     if name == 'orjson':
         assert orjson is not None, "orjson must be installed to use ORJSONCoder"
         json._default_encoder = ORJSONEncoder(
-            skipkeys=False, ensure_ascii=False, check_circular=True, allow_nan=True, indent=None, sort_keys=False, separators=None, default=None
+            skipkeys=False,
+            ensure_ascii=False,
+            check_circular=True,
+            allow_nan=True,
+            indent=None,
+            sort_keys=False,
+            separators=None,
+            default=None,
         )
     else:
         assert ujson is not None, "ujson must be installed to use UJSONCoder"
