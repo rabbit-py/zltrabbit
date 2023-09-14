@@ -15,6 +15,7 @@ class BaseModel:
         self._key = key
         self._use_time = use_time
         self._id_generator = service.id_generator
+        self._data = {}
 
     @property
     def key(self) -> str:
@@ -27,6 +28,10 @@ class BaseModel:
     @property
     def data(self) -> dict:
         return self._data
+
+    @data.setter
+    def data(self, value: dict) -> None:
+        self._data = value
 
     def load(self, data: dict) -> 'BaseModel':
         match self._key_style:

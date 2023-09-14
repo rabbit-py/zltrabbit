@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import datetime
+from base.util import date_utils
 import time
 from typing import Any
 import jwt
@@ -18,11 +18,11 @@ class JwtAuth:
         if expired == 0:
             config.update({'iss': self._issuer})
         elif isinstance(expired, int) and expired > 0:
-            config.update({'exp': datetime.datetime.now() + datetime.timedelta(seconds=expired), 'iss': self._issuer})
+            config.update({'exp': date_utils.timestamp_second() + expired, 'iss': self._issuer})
         else:
             config.update(
                 {
-                    'exp': datetime.datetime.now() + datetime.timedelta(seconds=self._expired),
+                    'exp': date_utils.timestamp_second() + self._expired,
                     'iss': self._issuer,
                 }
             )
