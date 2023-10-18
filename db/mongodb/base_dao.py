@@ -6,7 +6,6 @@ from db.mongodb.common_da_helper import CommonDAHelper
 from motor.motor_asyncio import AsyncIOMotorClient
 from base.coroutine.context import context
 
-
 class BaseDAO:
     def __init__(self, db: str, conn: str) -> None:
         self._db = db
@@ -14,8 +13,8 @@ class BaseDAO:
         self._db_map = {}
 
     @property
-    def client(self) -> AsyncIOMotorClient:
-        return service.get(self._conn).get_client()
+    async def client(self) -> AsyncIOMotorClient:
+        return await service.get(self._conn).get_client()
 
     async def transaction(self, *args, use_session=True, **kwargs) -> list:
         async with await self.client.start_session(causal_consistency=True) as session:

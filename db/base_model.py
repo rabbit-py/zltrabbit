@@ -49,7 +49,8 @@ class BaseModel:
 
     def to_dict(self) -> dict:
         keep_key = self._key_style != self.STYLE_LOWER_CAMEL
-        pb_tmp = {self._key: self._data.pop(self._key, self._id_generator.generate_id())}
+        key = self._data.pop(self._key, None)
+        pb_tmp = {self._key: key or self._id_generator.generate_id()}
         if self._use_time:
             create_time_key = 'create_time' if keep_key and 'create_time' in self._data else 'createTime'
             self._data.pop(create_time_key, None)

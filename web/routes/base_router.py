@@ -176,8 +176,8 @@ def add_route(
         @router.post("/batch_save")
         async def batch_update(request: Request) -> bool:
             param = await request_body(request, with_matcher=False)
-            for item in param:
-                item = model.copy().load(item)
+            for i, item in enumerate(param):
+                param[i] = model.copy().load(item)
             if 'batch' in before_events:
                 param = (
                     (await before_events['batch'](param))

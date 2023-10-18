@@ -51,3 +51,18 @@ def async_nowait(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
         asyncio.ensure_future(func(*args, **kwargs))
 
     return wrapper_function
+
+
+def event(run: Callable[P, Awaitable[R]], param: dict) -> Callable[P, Awaitable[R]]:
+    def wrapper(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
+        @wraps(func)
+        async def wrapper_function(*args: P.args, **kwargs: P.kwargs) -> R:
+            ret = (await run(param)) if inspect.iscoroutinefunction(run) else run(param)
+            params = func.__annotations__
+            if 'event_result' in params:
+                kwargs.update({'event_result': ret})
+            return (await func(*args, **kwargs)) if inspect.iscoroutinefunction(func) else func(*args, **kwargs)
+
+        return wrapper_function
+
+    return wrapper

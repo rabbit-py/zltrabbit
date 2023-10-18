@@ -18,8 +18,8 @@ class CommonDAHelper(DaInterface):
         return context.get('mongo_session')
 
     @property
-    def collection(self) -> AsyncIOMotorCollection:
-        return service.get(self.name).get_client()[self.db][self.coll]
+    async def collection(self) -> AsyncIOMotorCollection:
+        return (await service.get(self.name).get_client())[self.db][self.coll]
 
     def __init__(self, db: str, coll: str, name: str = 'db.default') -> None:
         self.name = name
@@ -28,7 +28,7 @@ class CommonDAHelper(DaInterface):
         self.id_generator = service.id_generator
 
     async def updateAll(self, data: dict, matcher: dict) -> int:
-        return (await self.collection.update_many(matcher, {'$set': data})).modified_count
+        return (await (await self.collection).update_many(matcher, {'$set': data})).modified_count
 
     async def save(self, model: Union[BaseModel, dict], matcher: dict = None, projection={}) -> dict:
         if isinstance(model, dict):
@@ -38,7 +38,7 @@ class CommonDAHelper(DaInterface):
         if matcher is None:
             matcher = {model.key: tmp.get(model.key)}
         projection.update({"_id": False})
-        return await self.collection.find_one_and_update(
+        return await (await self.collection).find_one_and_update(
             matcher,
             {"$set": data, '$setOnInsert': dict(filter(lambda x: x[0] not in data, tmp.items()))},
             return_document=ReturnDocument.AFTER,
@@ -68,16 +68,14 @@ class CommonDAHelper(DaInterface):
                 )
             )
 
-        result = await self.collection.bulk_write(bulk_write_data, session=self.session)
+        result = await (await self.collection).bulk_write(bulk_write_data, session=self.session)
         return result.inserted_count + result.modified_count
 
     async def get(self, id: Any = None, matcher: dict = {}, projection: dict = {}, sort: list = [], **kwargs) -> dict:
         if id is not None:
             matcher.update({"id": id})
-        if not matcher:
-            return
         projection.update({"_id": False})
-        return (await self.collection.find_one(matcher, projection=projection, sort=sort, **kwargs)) or {}
+        return (await (await self.collection).find_one(matcher, projection=projection, sort=sort, **kwargs)) or {}
 
     async def list(
         self, matcher: dict = {}, projection: dict = {}, page: int = 1, page_size: int = 0, sort=[], **kwargs
@@ -85,29 +83,30 @@ class CommonDAHelper(DaInterface):
         page = page if page > 0 else 1
         projection.update({"_id": False})
         return (
-            await self.collection.find(matcher, projection=projection, sort=sort, **kwargs)
+            await (await self.collection)
+            .find(matcher, projection=projection, sort=sort, **kwargs)
             .skip(page_size * (page - 1))
             .limit(page_size)
             .to_list(length=None)
         )
 
     async def count(self, matcher: dict = {}) -> int:
-        return await self.collection.count_documents(matcher)
+        return await (await self.collection).count_documents(matcher)
 
     async def delete(self, id: Any = None, matcher: dict = {}) -> int:
         if id is not None:
             matcher.update({"id": id})
         if not matcher:
             return
-        return (await self.collection.delete_one(matcher)).deleted_count
+        return (await (await self.collection).delete_one(matcher)).deleted_count
 
     async def deleteAll(self, matcher: dict) -> int:
         if not matcher:
             return
-        return (await self.collection.delete_many(matcher)).deleted_count
+        return (await (await self.collection).delete_many(matcher)).deleted_count
 
     async def batch_delete(self, matcher: dict = {}) -> int:
-        return (await self.collection.delete_many(matcher)).deleted_count
+        return (await (await self.collection).delete_many(matcher)).deleted_count
 
     async def sample(self, sample: int, matcher: dict = {}, projection: dict = {}, sort: List = []) -> List:
         projection.update({"_id": False})
@@ -119,17 +118,17 @@ class CommonDAHelper(DaInterface):
         if projection:
             param.append({'$project': projection})
         param.append({'$sample': {'size': sample}})
-        return await self.collection.aggregate(param).to_list(length=None)
+        return await (await self.collection).aggregate(param).to_list(length=None)
 
     async def distinct(self, key: str, matcher: dict = {}, cached: dict = None) -> List:
         if cached:
 
             @cache(**cached)
             async def query(key: str, matcher: dict) -> List:
-                return await self.collection.find(matcher).distinct(key)
+                return await (await self.collection).find(matcher).distinct(key)
 
             return await query(key, matcher)
-        return await self.collection.find(matcher).distinct(key)
+        return await (await self.collection).find(matcher).distinct(key)
 
     async def index(self, param: List = [], page: int = 1, page_size: int = 20, sort={}, cached: dict = None) -> dict:
         if sort:
@@ -171,7 +170,7 @@ class CommonDAHelper(DaInterface):
 
             @cache(**cached)
             async def use_cache(pipeline: List) -> List:
-                return await self.collection.aggregate(pipeline).to_list(length=None)
+                return await (await self.collection).aggregate(pipeline).to_list(length=None)
 
             return await use_cache(pipeline)
-        return await self.collection.aggregate(pipeline).to_list(length=None)
+        return await (await self.collection).aggregate(pipeline).to_list(length=None)

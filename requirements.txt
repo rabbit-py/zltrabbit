@@ -7,3 +7,4 @@ pyjwt
 redis[hiredis]
 passlib
 maya
+asyncssh

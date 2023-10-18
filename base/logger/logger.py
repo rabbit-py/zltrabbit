@@ -5,21 +5,23 @@ from loguru import logger
 from uuid import uuid1
 
 from base.functions import env
+from base.logger.filter_interface import FilterInterface
 
 from ..coroutine.context import context
 from ..di.service_location import service
 
 
-def filter(record: dict) -> bool:
-    try:
-        message_uuid = context.get('message_id')
-    except Exception:
-        pass
-    if not message_uuid:
-        message_uuid = uuid1().hex
-        context.set('message_id', message_uuid)
-    record["extra"]["request_id"] = message_uuid
-    return True
+class LoggerFilter(FilterInterface):
+    def filter(self, record: dict) -> bool:
+        try:
+            message_uuid = context.get('message_id')
+        except Exception:
+            pass
+        if not message_uuid:
+            message_uuid = uuid1().hex
+            context.set('message_id', message_uuid)
+        record["extra"]["request_id"] = message_uuid
+        return True
 
 
 def loguru_setup() -> None:
@@ -35,5 +37,5 @@ def loguru_setup() -> None:
         format=custom_format,
         level=config.get('level', 0),
         enqueue=config.get('enqueue', True),
-        filter=service.create(config.get('filter'), {}, False).filter if config.get('filter') else filter,
+        filter=service.create(config.get('filter'), {}, False).filter if config.get('filter') else LoggerFilter().filter,
     )
