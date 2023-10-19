@@ -53,15 +53,40 @@ def async_nowait(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
     return wrapper_function
 
 
-def event(run: Callable[P, Awaitable[R]], param: dict) -> Callable[P, Awaitable[R]]:
+def event(
+    before: Callable[P, Awaitable[R]] = None,
+    after: Callable[P, Awaitable[R]] = None,
+    reraise: bool = True,
+    *event_args: P.args,
+    **event_kwargs: P.kwargs,
+) -> Callable[P, Awaitable[R]]:
     def wrapper(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
         @wraps(func)
         async def wrapper_function(*args: P.args, **kwargs: P.kwargs) -> R:
-            ret = (await run(param)) if inspect.iscoroutinefunction(run) else run(param)
-            params = func.__annotations__
-            if 'event_result' in params:
-                kwargs.update({'event_result': ret})
-            return (await func(*args, **kwargs)) if inspect.iscoroutinefunction(func) else func(*args, **kwargs)
+            try:
+                if before:
+                    ret = (
+                        (await before(*event_args, **event_kwargs))
+                        if inspect.iscoroutinefunction(before)
+                        else before(*event_args, **event_kwargs)
+                    )
+                    params = func.__annotations__
+                    if 'before_result' in params:
+                        kwargs.update({'before_result': ret})
+                ret = (await func(*args, **kwargs)) if inspect.iscoroutinefunction(func) else func(*args, **kwargs)
+                if after:
+                    ret = (
+                        (await after(ret, *event_args, **event_kwargs))
+                        if inspect.iscoroutinefunction(after)
+                        else after(ret, *event_args, **event_kwargs)
+                    )
+
+                return ret
+            except Exception as e:
+                if reraise:
+                    raise e
+                else:
+                    logger.exception(e)
 
         return wrapper_function
 
