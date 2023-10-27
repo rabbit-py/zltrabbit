@@ -54,7 +54,7 @@ def key_builder(
 
 
 def shared(
-    key: Any = None, timeout: float = 3, coder: CoderInterface = ORJSONCoder, prefix: str = ''
+    key: Any = None, timeout: float = 3, coder: CoderInterface = ORJSONCoder, prefix: str = '', only_lock=False
 ) -> Callable[P, Awaitable[R]]:
     def wrapper(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
         @wraps(func)
@@ -63,7 +63,7 @@ def shared(
             shared_obj = Share.get_share(new_key)
             try:
                 await shared_obj.channel.push(new_key, timeout)
-                if Share.share_map.get(new_key) is None:
+                if Share.share_map.get(new_key) is None and not only_lock:
                     return shared_obj.result
                 shared_obj.data = (await func(*args, **kwargs)) if inspect.iscoroutinefunction(func) else func(*args, **kwargs)
                 return shared_obj.result

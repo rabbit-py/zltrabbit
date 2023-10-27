@@ -3,7 +3,7 @@ from urllib.parse import urlparse, urlunparse, ParseResult
 from base.di.service_location import service
 
 
-async def sshforward_event(param: dict) -> int:
+async def sshforward_event(param: dict) -> None:
     url: str = param.get('url')
     if '@' in url:
         scheme, _, opts = url.rpartition('://')

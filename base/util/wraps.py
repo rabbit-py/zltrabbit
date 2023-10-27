@@ -37,7 +37,7 @@ def retry(times: int = 3, sleep: float = 0.2, raise_except: bool = True) -> Call
                 logger.warning(f'{func.__name__} retry the {str(times)} times with sleep {sleep}s')
 
                 if sleep > 0:
-                    asyncio.sleep(sleep)
+                    await asyncio.sleep(sleep)
 
         return wrapper_function
 

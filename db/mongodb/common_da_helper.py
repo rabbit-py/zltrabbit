@@ -30,7 +30,9 @@ class CommonDAHelper(DaInterface):
     async def updateAll(self, data: dict, matcher: dict) -> int:
         return (await (await self.collection).update_many(matcher, {'$set': data})).modified_count
 
-    async def save(self, model: Union[BaseModel, dict], matcher: dict = None, projection={}) -> dict:
+    async def save(
+        self, model: Union[BaseModel, dict], matcher: dict = None, projection: dict = {}, upsert: bool = True
+    ) -> dict:
         if isinstance(model, dict):
             model = BaseModel().load(model)
         tmp = model.to_dict()
@@ -42,12 +44,12 @@ class CommonDAHelper(DaInterface):
             matcher,
             {"$set": data, '$setOnInsert': dict(filter(lambda x: x[0] not in data, tmp.items()))},
             return_document=ReturnDocument.AFTER,
-            upsert=True,
+            upsert=upsert,
             projection=projection,
             session=self.session,
         )
 
-    async def batch_save(self, models: list[Union[BaseModel, dict]], matcher: list = None) -> int:
+    async def batch_save(self, models: list[Union[BaseModel, dict]], matcher: list = None, upsert: bool = True) -> int:
         bulk_write_data = []
         for model in models:
             if isinstance(model, dict):
@@ -64,7 +66,7 @@ class CommonDAHelper(DaInterface):
                 UpdateOne(
                     condition,
                     {"$set": data, '$setOnInsert': dict(filter(lambda x: x[0] not in data, tmp.items()))},
-                    upsert=True,
+                    upsert=upsert,
                 )
             )
 
