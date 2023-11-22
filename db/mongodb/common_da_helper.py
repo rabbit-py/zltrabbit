@@ -31,7 +31,7 @@ class CommonDAHelper(DaInterface):
         return (await (await self.collection).update_many(matcher, {'$set': data})).modified_count
 
     async def save(
-        self, model: Union[BaseModel, dict], matcher: dict = None, projection: dict = {}, upsert: bool = True
+        self, model: Union[BaseModel, dict], matcher: dict = None, projection: dict = {}, upsert: bool = True, more_update={}
     ) -> dict:
         if isinstance(model, dict):
             model = BaseModel().load(model)
@@ -42,7 +42,7 @@ class CommonDAHelper(DaInterface):
         projection.update({"_id": False})
         return await (await self.collection).find_one_and_update(
             matcher,
-            {"$set": data, '$setOnInsert': dict(filter(lambda x: x[0] not in data, tmp.items()))},
+            dict(more_update, **{"$set": data, '$setOnInsert': dict(filter(lambda x: x[0] not in data, tmp.items()))}),
             return_document=ReturnDocument.AFTER,
             upsert=upsert,
             projection=projection,

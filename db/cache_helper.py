@@ -93,7 +93,7 @@ def cache(
                         exc_info=True,
                     )
             else:
-                logger.info(f"Get key={str(new_key)} from Cache={name} ttl={ttl}")
+                logger.debug(f"Get key={str(new_key)} from Cache={name} ttl={ttl}")
             return result
 
         return wrapper_function

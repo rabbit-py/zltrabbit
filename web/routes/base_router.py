@@ -81,11 +81,15 @@ def add_route(
                 )
             else:
                 param = manager.default_query(matcher)
+            if not param:
+                return []
             result = await manager.index(param, page=page, page_size=pageSize, sort=sort, cached=cached.get('index'))
             if 'index' in after_events:
-                (await after_events['index'](param, result['records'])) if inspect.iscoroutinefunction(
-                    after_events['index']
-                ) else after_events['index'](param, result['records'])
+                result['records'] = (
+                    await after_events['index'](matcher, result['records'])
+                    if inspect.iscoroutinefunction(after_events['index'])
+                    else after_events['index'](matcher, result['records'])
+                )
             return result
 
     if 'list' not in exclude:
@@ -104,17 +108,22 @@ def add_route(
             sort = matcher.pop('sort{}', None)
             if 'list' in before_events:
                 param = (
-                    (await before_events['list'](matcher))
+                    await before_events['list'](matcher)
                     if inspect.iscoroutinefunction(before_events['list'])
                     else before_events['list'](matcher)
                 )
             else:
                 param = manager.default_query(matcher)
+            if not param:
+                return []
             result = (await manager.query(param, sort=sort, page=page, page_size=pageSize, cached=cached.get('list'))) or []
             if 'list' in after_events:
-                (await after_events['list'](param, result)) if inspect.iscoroutinefunction(
-                    after_events['list']
-                ) else after_events['list'](param, result)
+                result = (
+                    await after_events['list'](matcher, result)
+                    if inspect.iscoroutinefunction(after_events['list'])
+                    else after_events['list'](matcher, result)
+                )
+
             return result
 
     if 'get' not in exclude:
@@ -133,17 +142,21 @@ def add_route(
             sort = matcher.pop('sort{}', None)
             if 'get' in before_events:
                 param = (
-                    (await before_events['get'](matcher))
+                    await before_events['get'](matcher)
                     if inspect.iscoroutinefunction(before_events['get'])
                     else before_events['get'](matcher)
                 )
             else:
                 param = manager.default_query(matcher if not id else dict(matcher, **{'id': id}))
+            if not param:
+                return {}
             result = ((await manager.query(param, sort=sort, cached=cached.get('get'))) or [{}]).pop(0)
             if 'get' in after_events:
-                (await after_events['get'](param, result)) if inspect.iscoroutinefunction(
-                    after_events['get']
-                ) else after_events['get'](param, result)
+                result = (
+                    await after_events['get'](matcher, result)
+                    if inspect.iscoroutinefunction(after_events['get'])
+                    else after_events['get'](matcher, result)
+                )
             return result
 
     if 'save' not in exclude:
@@ -156,7 +169,7 @@ def add_route(
             param = model.copy().load(param)
             if 'save' in before_events:
                 param = (
-                    (await before_events['save'](param))
+                    await before_events['save'](param)
                     if inspect.iscoroutinefunction(before_events['save'])
                     else before_events['save'](param)
                 )
@@ -166,9 +179,11 @@ def add_route(
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='参数不能为空')
             result = await manager.save(**param)
             if 'save' in after_events:
-                (await after_events['save'](param, result)) if inspect.iscoroutinefunction(
-                    after_events['save']
-                ) else after_events['save'](param, result)
+                result = (
+                    await after_events['save'](param, result)
+                    if inspect.iscoroutinefunction(after_events['save'])
+                    else after_events['save'](param, result)
+                )
             return result
 
         @router.post("/batch_update")
@@ -180,7 +195,7 @@ def add_route(
                 param[i] = model.copy().load(item)
             if 'batch' in before_events:
                 param = (
-                    (await before_events['batch'](param))
+                    await before_events['batch'](param)
                     if inspect.iscoroutinefunction(before_events['batch'])
                     else before_events['batch'](param)
                 )
@@ -190,9 +205,11 @@ def add_route(
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='参数不能为空')
             result = await manager.batch_save(**param)
             if 'batch' in after_events:
-                (await after_events['batch'](item, result)) if inspect.iscoroutinefunction(
-                    after_events['batch']
-                ) else after_events['batch'](item, result)
+                result = (
+                    await after_events['batch'](item, result)
+                    if inspect.iscoroutinefunction(after_events['batch'])
+                    else after_events['batch'](item, result)
+                )
             return True
 
     if 'count' not in exclude:
@@ -207,7 +224,7 @@ def add_route(
                 matcher = to_lower_camel(matcher)
             if 'count' in before_events:
                 param = (
-                    (await before_events['count'](matcher))
+                    await before_events['count'](matcher)
                     if inspect.iscoroutinefunction(before_events['count'])
                     else before_events['count'](matcher)
                 )
@@ -215,9 +232,11 @@ def add_route(
                 param = manager.default_query(matcher)
             result = await manager.count_query(param, cached=cached.get('distinct'))
             if 'count' in after_events:
-                (await after_events['count'](param, result)) if inspect.iscoroutinefunction(
-                    after_events['count']
-                ) else after_events['count'](param, result)
+                result = (
+                    await after_events['count'](param, result)
+                    if inspect.iscoroutinefunction(after_events['count'])
+                    else after_events['count'](param, result)
+                )
             return result
 
     if 'delete' not in exclude:
@@ -228,15 +247,17 @@ def add_route(
             ret = True
             if 'delete' in before_events:
                 ret = (
-                    (await before_events['delete'](id))
+                    await before_events['delete'](id)
                     if inspect.iscoroutinefunction(before_events['delete'])
                     else before_events['delete'](id)
                 )
             result = (await manager.delete(id)) if ret else 0
             if 'delete' in after_events:
-                (await after_events['delete'](id, result)) if inspect.iscoroutinefunction(
-                    after_events['delete']
-                ) else after_events['delete'](id, result)
+                result = (
+                    await after_events['delete'](id, result)
+                    if inspect.iscoroutinefunction(after_events['delete'])
+                    else after_events['delete'](id, result)
+                )
             return result
 
     if 'distinct' not in exclude:
@@ -249,7 +270,7 @@ def add_route(
                 matcher = to_lower_camel(matcher)
             if 'distinct' in before_events:
                 param = (
-                    (await before_events['distinct'](key, matcher))
+                    await before_events['distinct'](key, matcher)
                     if inspect.iscoroutinefunction(before_events['distinct'])
                     else before_events['distinct'](key, matcher)
                 )
@@ -257,9 +278,11 @@ def add_route(
                 param = matcher
             result = await manager.distinct(key, param, cached=cached.get('distinct'))
             if 'distinct' in after_events:
-                (await after_events['distinct'](key, param, result)) if inspect.iscoroutinefunction(
-                    after_events['distinct']
-                ) else after_events['distinct'](key, param, result)
+                result = (
+                    await after_events['distinct'](key, param, result)
+                    if inspect.iscoroutinefunction(after_events['distinct'])
+                    else after_events['distinct'](key, param, result)
+                )
             return result
 
 

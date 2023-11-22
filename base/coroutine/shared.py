@@ -47,7 +47,7 @@ def key_builder(
         + str(args[1:] if 'self' in sig.parameters else args)
         + str(ordered_kwargs)
     )
-    new_key = coder.encode(key or coder.encode(tmp_param).decode()).decode()
+    new_key = key if key and isinstance(key, str) else coder.encode(key or tmp_param).decode()
     if '.' in new_key or len(new_key) > 32:
         new_key = md5(new_key.encode("utf-8")).hexdigest()
     return f'{prefix}:{new_key}' if prefix else new_key

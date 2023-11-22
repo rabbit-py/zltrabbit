@@ -8,7 +8,9 @@ class SSHForward:
     def tunnel(self) -> asyncssh.SSHListener:
         return self._tunnel
 
-    def __init__(self, host='', port=22, username='', password='', forward_host='127.0.0.1', forward_port=0, key=None) -> None:
+    def __init__(
+        self, host='', port=22, username='', password='', forward_host='127.0.0.1', forward_port=0, key=None, known_hosts=None
+    ) -> None:
         self._host = host
         self._port = port
         self._username = username
@@ -16,10 +18,16 @@ class SSHForward:
         self._forward_host = forward_host
         self._forward_port = forward_port
         self._key = key
+        self._known_hosts = known_hosts
 
     async def run(self) -> int:
         ssh_conn = await asyncssh.connect(
-            self._host, port=self._port, username=self._username, password=self._password, client_keys=self._key
+            self._host,
+            port=self._port,
+            username=self._username,
+            password=self._password,
+            client_keys=self._key,
+            known_hosts=self._known_hosts,
         )
         self._tunnel = await ssh_conn.forward_local_port('', 0, self._forward_host, self._forward_port)
         asyncio.ensure_future(self.tunnel.wait_closed())
