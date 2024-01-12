@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from contextlib import asynccontextmanager
 from functools import wraps
 from redis.asyncio.client import AbstractRedis
 from redis.asyncio.cluster import AbstractRedisCluster
@@ -52,3 +53,13 @@ def redis_lock(key: Any, name: str = 'redis.default', timeout: float = 10) -> Ca
         return wrapper_function
 
     return wrapper
+
+
+@asynccontextmanager
+async def with_redis_lock(key: Any, name: str = 'redis.default', timeout: float = 10) -> Lock:
+    lock = Lock(service.get(name).client, key, timeout=timeout)
+    await lock.acquire()
+    try:
+        yield lock
+    finally:
+        await lock.release()

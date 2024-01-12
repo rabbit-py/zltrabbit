@@ -4,7 +4,7 @@ import asyncio
 from functools import wraps
 from loguru import logger
 import inspect
-from typing import Awaitable, Callable
+from typing import Awaitable, Callable, Union
 from base.types import P, R
 
 
@@ -12,11 +12,13 @@ class NotRetryException(Exception):
     ...
 
 
-def retry(times: int = 3, sleep: float = 0.2, raise_except: bool = True) -> Callable[P, Awaitable[R]]:
+def retry(times: int = 3, sleep: Union[float, list] = 0.2, raise_except: bool = True) -> Callable[P, Awaitable[R]]:
     def wrapper(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
         @wraps(func)
         async def wrapper_function(*args: P.args, **kwargs: P.kwargs) -> R:
             nonlocal times
+            times = max(times, len(sleep) if isinstance(sleep, list) else 0) + 1
+            num = times
             while times > 0:
                 try:
                     return (await func(*args, **kwargs)) if inspect.iscoroutinefunction(func) else func(*args, **kwargs)
@@ -34,9 +36,13 @@ def retry(times: int = 3, sleep: float = 0.2, raise_except: bool = True) -> Call
                         else:
                             logger.error(e)
                             return None
-                logger.warning(f'{func.__name__} retry the {str(times)} times with sleep {sleep}s')
 
-                if sleep > 0:
+                if isinstance(sleep, list) and len(sleep) > 0:
+                    wait = sleep.pop(0)
+                    logger.warning(f'{func.__name__} retry the {str(num-times)} times with sleep {wait}s')
+                    await asyncio.sleep(wait)
+                elif sleep > 0:
+                    logger.warning(f'{func.__name__} retry the {str(num-times)} times with sleep {sleep}s')
                     await asyncio.sleep(sleep)
 
         return wrapper_function

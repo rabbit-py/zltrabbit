@@ -2,7 +2,7 @@
 import importlib
 import inspect
 from json import JSONDecodeError
-import os
+import os, xmltodict
 from fastapi import APIRouter, BackgroundTasks, FastAPI, HTTPException, Request, status
 from fastapi.responses import ORJSONResponse as _JSONResponse
 from typing import Optional
@@ -35,6 +35,9 @@ async def request_body(request: Request, exclude: list = [], with_matcher: bool 
             'Content-Type', ''
         ) or 'application/x-www-form-urlencoded' in request.headers.get('Content-Type', ''):
             body = dict(await request.form())
+        elif 'application/xml' in request.headers.get('Content-Type', ''):
+            body = await request.body()
+            body = xmltodict.parse(body).get('xml')
         elif await request.body():
             body = await request.json()
         if isinstance(body, dict):

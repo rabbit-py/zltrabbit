@@ -21,6 +21,10 @@ def env(key: str, default: Any = None) -> Any:
     value = os.environ.get(key)
     if value is None:
         return default
+    elif value == 'false':
+        return False
+    elif value == 'true':
+        return True
     return value
 
 

@@ -35,7 +35,7 @@ def loguru_setup() -> None:
     logger.add(
         sys.stderr,
         format=custom_format,
-        level=config.get('level', 0),
+        level=config.get('level', 'DEBUG' if env('DEBUG') else 'INFO'),
         enqueue=config.get('enqueue', True),
         filter=service.create(config.get('filter'), {}, False).filter if config.get('filter') else LoggerFilter().filter,
     )

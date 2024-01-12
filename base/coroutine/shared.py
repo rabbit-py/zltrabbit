@@ -47,7 +47,11 @@ def key_builder(
         + str(args[1:] if 'self' in sig.parameters else args)
         + str(ordered_kwargs)
     )
-    new_key = key if key and isinstance(key, str) else coder.encode(key or tmp_param).decode()
+    return with_key_builder(key or tmp_param, coder, prefix)
+
+
+def with_key_builder(key: Any = None, coder: CoderInterface = ORJSONCoder, prefix: str = '') -> str:
+    new_key = key if key and isinstance(key, str) else coder.encode(key).decode()
     if '.' in new_key or len(new_key) > 32:
         new_key = md5(new_key.encode("utf-8")).hexdigest()
     return f'{prefix}:{new_key}' if prefix else new_key
