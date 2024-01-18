@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 from typing import Any, List, Union
+from async_property import async_property
 
 from pymongo import ReturnDocument, UpdateOne
 from base.di.service_location import service
@@ -17,7 +18,7 @@ class CommonDAHelper(DaInterface):
     def session(self) -> AsyncIOMotorClientSession:
         return context.get('mongo_session')
 
-    @property
+    @async_property
     async def collection(self) -> AsyncIOMotorCollection:
         return (await service.get(self.name).get_client())[self.db][self.coll]
 
@@ -74,8 +75,10 @@ class CommonDAHelper(DaInterface):
         return result.inserted_count + result.modified_count
 
     async def get(self, id: Any = None, matcher: dict = {}, projection: dict = {}, sort: list = [], **kwargs) -> dict:
-        if id is not None:
+        if id:
             matcher.update({"id": id})
+        if not matcher:
+            return {}
         projection.update({"_id": False})
         return (await (await self.collection).find_one(matcher, projection=projection, sort=sort, **kwargs)) or {}
 
