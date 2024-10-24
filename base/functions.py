@@ -7,12 +7,14 @@
       xxx
 """
 
+import asyncio
+from contextlib import asynccontextmanager
 import re
 from loguru import logger
 from .util.datetime_utils import DateTime
 
 import os
-from typing import Any, Callable, Union
+from typing import Any, Awaitable, Callable, Union
 
 from passlib.context import CryptContext
 
@@ -89,3 +91,24 @@ def encryption_password_or_decode(pwd: str, hashed_password: str = None) -> Unio
         return password
 
     return decode_password() if hashed_password else encryption_password()
+
+
+async def wrap_done(fn: Awaitable, event: asyncio.Event, reraise: bool = None) -> Any:
+    try:
+        return await fn
+    except Exception as e:
+        logger.error(e)
+        if reraise or env('DEBUG', True):
+            raise e
+    finally:
+        event.set()
+
+
+@asynccontextmanager
+async def with_logger(reraise: bool = True) -> Any:
+    try:
+        yield
+    except Exception as e:
+        logger.error(e)
+        if reraise:
+            raise e

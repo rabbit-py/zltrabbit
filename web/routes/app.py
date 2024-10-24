@@ -2,6 +2,7 @@
 
 import inspect
 from contextlib import asynccontextmanager
+from typing import AsyncGenerator
 from fastapi import FastAPI, status
 from starlette.exceptions import HTTPException
 from fastapi.exceptions import RequestValidationError
@@ -46,7 +47,7 @@ class App:
         self._app = app
 
     @asynccontextmanager
-    async def liefspan(self, app: FastAPI) -> None:
+    async def liefspan(self, app: FastAPI) -> AsyncGenerator:
         service.refresh()
         await self._event(self._before_import)
         auto_import(env('ROUTE_PATH'), app)
