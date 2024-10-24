@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+from typing import AsyncGenerator
 from base.di.service_location import service
 from pymilvus import connections
 
@@ -13,8 +14,8 @@ class BaseDAO:
         self._db_map = {}
 
     @property
-    async def client(self) -> connections:
-        return await service.get(self._conn).get_client()
+    def client(self) -> AsyncGenerator:
+        return service.get(self._conn).get_client()
 
     def __getattr__(self, key: str) -> CommonDAHelper:
         key = key.replace("_db", "")

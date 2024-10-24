@@ -1,12 +1,11 @@
 # -*- coding: utf-8 -*-
 
-from typing import Any, List, Union
+from typing import Any, AsyncGenerator, List, Union
 from async_property import async_property
 
 from pymongo import ReturnDocument, UpdateOne
 from base.di.service_location import service
 from base.coroutine.context import context
-from motor.motor_asyncio import AsyncIOMotorClientSession, AsyncIOMotorCollection
 from db.base_model import BaseModel
 from db.cache_helper import cache
 
@@ -15,11 +14,11 @@ from db.da_interface import DaInterface
 
 class CommonDAHelper(DaInterface):
     @property
-    def session(self) -> AsyncIOMotorClientSession:
+    def session(self) -> Any:
         return context.get('mongo_session')
 
     @async_property
-    async def collection(self) -> AsyncIOMotorCollection:
+    async def collection(self) -> AsyncGenerator:
         return (await service.get(self.name).get_client())[self.db][self.coll]
 
     def __init__(self, db: str, coll: str, name: str = 'db.default') -> None:

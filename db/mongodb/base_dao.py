@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import asyncio
+from typing import AsyncGenerator
 
 from async_property import async_property
 from base.di.service_location import service
@@ -16,7 +17,7 @@ class BaseDAO:
         self._db_map = {}
 
     @async_property
-    async def client(self) -> AsyncIOMotorClient:
+    async def client(self) -> AsyncGenerator:
         return await service.get(self._conn).get_client()
 
     async def transaction(self, *args, use_session=True, **kwargs) -> list:

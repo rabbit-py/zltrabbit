@@ -71,17 +71,25 @@ class MatchHelper:
     match_map = {
         'like': lambda x: {'$regex': x},
         'not like': lambda x: {'$not': {'$regex': x}},
-        'in': lambda x: {'$in': x},
-        'between': lambda x: filter(lambda y: x[1] is not None, {'$gte': x.pop(0, None), '$lte': x.pop(0, None)}.items()),
+        'in': lambda x: {'$in': x if isinstance(x, list) else [x]},
+        'between': lambda x: dict(
+            filter(
+                lambda y: y[1] is not None, {'$gte': x[0] if len(x) > 0 else None, '$lt': x[1] if len(x) > 1 else None}.items()
+            )
+        ),
         '>': lambda x: {'$gt': x},
         '<': lambda x: {'$lt': x},
         '>=': lambda x: {'$gte': x},
         '<=': lambda x: {'$lte': x},
         '!=': lambda x: {'$not': x},
+        '=': lambda x: {'$eq': x},
     }
 
-    def convert(self, matcher: dict, convert_map: dict) -> None:
+    def convert(self, matcher: dict, convert_map: dict, ignore_empty=False) -> None:
         for key in [x for x in matcher.keys()]:
+            if ignore_empty and not matcher[key]:
+                matcher.pop(key)
+                continue
             func = convert_map.get(key, matcher[key])
             matcher.update({key: func(matcher[key]) if isinstance(func, Callable) else func})
 

@@ -27,18 +27,14 @@ class CommonDAHelper(object):
         self._loop = loop
 
     @property
-    async def collection(self) -> Collection:
+    def collection(self) -> Collection:
         collection = self._collection_map.get(self.coll)
         if not collection:
-            client = await self._conn.get_client()
-            collection = client(name=self.coll, using=self._conn.alias)
-            collection.load(_async=True)
-            utility.wait_for_loading_complete(self.coll, using=self._conn.alias)
-            self._collection_map[self.coll] = collection
+            self._collection_map[self.coll] = self._conn.get_client()
         return self._collection_map[self.coll]
 
     async def get_tb_info(self) -> dict:
-        if await self._exists_tb(self.coll):
+        if await self.exists_tb(self.coll):
             collection = self.collection
             return {
                 "base_info": str(collection).split("\n")[2:-1],
@@ -46,19 +42,20 @@ class CommonDAHelper(object):
             }
         return {}
 
-    async def _exists_tb(self, tb_name: str) -> bool:
+    async def exists_tb(self, tb_name: str) -> bool:
         try:
-            return await self.async_run(
-                utility.has_collection, tb_name, using=self.collection._using
-            )
+            return await self.async_run(utility.has_collection, tb_name, using=self.collection._using)
         except exceptions.SchemaNotReadyException:
             return False
+        except Exception as e:
+            logger.error(e)
+            raise e
 
-    async def _exists_index(self, collection: Collection) -> bool:
+    async def exists_index(self, collection: Collection) -> bool:
         return await self.async_run(collection.has_index)
 
     async def rename_tb(self, old_name: str, new_name: str) -> Any:
-        if await self._exists_tb(old_name):
+        if await self.exists_tb(old_name):
             return await self.async_run(
                 utility.rename_collection,
                 old_name,
@@ -67,20 +64,18 @@ class CommonDAHelper(object):
             )
 
     async def list_tbs(self) -> list:
-        return await self.async_run(
-            utility.list_collections, using=self.collection._using
-        )
+        return await self.async_run(utility.list_collections, using=self.collection._using)
 
     async def drop_tb(self, tb_name: str = None):
         tb_name = tb_name or self.coll
-        if await self._exists_tb(tb_name):
+        if await self.exists_tb(tb_name):
             self.collection.drop()
 
-    async def _create_index_tb(self, schema: Optional[CollectionSchema]) -> Collection:
+    async def create_index_tb(self, schema: Optional[CollectionSchema]) -> Collection:
         async with self._lock:
-            client = await self._conn.get_client()
+            client = self._conn.get_client()
             collection = client(name=self.coll, schema=schema, using=self._conn.alias)
-            if not (await self._exists_index(collection)):
+            if not (await self.exists_index(collection)):
                 index_params = {
                     "metric_type": "IP",
                     "index_type": "IVF_FLAT",
@@ -96,17 +91,12 @@ class CommonDAHelper(object):
             return collection
 
     def _batch_data(self, data: list, batch_size=100) -> list:
-        result = [
-            [field[i : i + batch_size] for i in range(0, len(field), batch_size)]
-            for field in data
-        ]
+        result = [[field[i : i + batch_size] for i in range(0, len(field), batch_size)] for field in data]
         return result
 
-    async def bulk_insert(
-        self, data: List[list], schema: Optional[CollectionSchema], bulk_size: int = 100
-    ) -> int:
-        if not await self._exists_tb(self.coll):
-            await self._create_index_tb(schema)
+    async def bulk_insert(self, data: List[list], schema: Optional[CollectionSchema], bulk_size: int = 100) -> int:
+        if not await self.exists_tb(self.coll):
+            await self.create_index_tb(schema)
         collection = self.collection
         result = self._batch_data(data, bulk_size)
         for batch in zip(*result):
@@ -119,14 +109,12 @@ class CommonDAHelper(object):
         return collection.num_entities
 
     async def query(self, expr: str, *args, **kwargs) -> list:
-        if not (await self._exists_tb(self.coll)):
+        if not (await self.exists_tb(self.coll)):
             raise Exception(f"Collection {self.coll} not exists!")
         return await self.async_run(self.collection.query, *args, expr=expr, **kwargs)
 
-    async def delete(
-        self, query_expr: str = None, ids: list = [], id_name: str = "id"
-    ) -> int:
-        if not (await self._exists_tb(self.coll)):
+    async def delete(self, query_expr: str = None, ids: list = [], id_name: str = "id") -> int:
+        if not (await self.exists_tb(self.coll)):
             return
         if query_expr is not None:
             ids = await self.async_run(self.collection.query, query_expr)
@@ -166,13 +154,9 @@ class CommonDAHelper(object):
 
         result = []
         for h in hits:
-            tmp = [
-                {"score": round(row.distance, 4), **row.entity._row_data} for row in h
-            ]
+            tmp = [{"score": round(row.distance, 4), **row.fields} for row in h]
             result.append(tmp)
         return result
 
     async def async_run(self, func: Callable, *args: P.args, **kwargs: P.kwargs) -> Any:
-        return await self._loop.run_in_executor(
-            None, functools.partial(func, *args, **kwargs)
-        )
+        return await self._loop.run_in_executor(None, functools.partial(func, *args, **kwargs))
