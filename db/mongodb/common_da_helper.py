@@ -137,11 +137,14 @@ class CommonDAHelper(DaInterface):
     async def index(self, param: List = [], page: int = 1, page_size: int = 20, sort={}, cached: dict = None) -> dict:
         if sort:
             param.append({'$sort': sort})
+        records = [{'$project': {'_id': False}}, {'$skip': page_size * (page - 1)}]
+        if page_size > 0:
+            records.append({'$limit': page_size})
         param.append(
             {
                 '$facet': {
                     'total': [{'$count': "count"}],
-                    'records': [{'$project': {'_id': False}}, {'$skip': page_size * (page - 1)}, {'$limit': page_size}],
+                    'records': records,
                 }
             }
         )
